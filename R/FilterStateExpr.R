@@ -1,0 +1,226 @@
+# FilterStateExpr ------
+
+#' @name FilterStateExpr
+#' @docType class
+#'
+#' @title `FilterStateExpr` `R6` class
+#'
+#' @description Sister class to `FilterState` that handles arbitrary filter expressions.
+#'
+#' @details
+#' Creates a filter state around a predefined condition call (logical predicate).
+#' The condition call is independent of the data
+#' and the filter card allows no interaction (the filter is always fixed).
+#'
+#' @keywords internal
+#'
+FilterStateExpr <- R6::R6Class( # nolint
+  classname = "FilterStateExpr",
+  # public methods ----
+  public = list(
+    #' @description
+    #' Initialize a `FilterStateExpr` object.
+    #' @param slice (`teal_slice_expr`)
+    #' @return Object of class `FilterStateExpr`, invisibly.
+    #'
+    initialize = function(slice) {
+      checkmate::assert_class(slice, "teal_slice_expr")
+      private$teal_slice <- slice
+      invisible(self)
+    },
+
+    #' @description
+    #' Returns a formatted string representing this `FilterStateExpr` object.
+    #'
+    #' @param show_all (`logical(1)`) passed to `format.teal_slice`
+    #' @param trim_lines (`logical(1)`) passed to `format.teal_slice`
+    #'
+    #' @return `character(1)` the formatted string
+    #'
+    format = function(show_all = FALSE, trim_lines = TRUE) {
+      sprintf(
+        "%s:\n%s",
+        class(self)[1],
+        format(self$get_state(), show_all = show_all, trim_lines = trim_lines)
+      )
+    },
+
+    #' @description
+    #' Prints this `FilterStateExpr` object.
+    #' @param ... arguments passed to the `format` method
+    #' @return `NULL`, invisibly.
+    #'
+    print = function(...) {
+      cat(isolate(self$format(...)))
+    },
+
+    #' @description
+    #' Returns a complete description of this filter state.
+    #'
+    #' @return A `teal_slice` object.
+    #'
+    get_state = function() {
+      private$teal_slice
+    },
+
+    #' @description
+    #' Does nothing. Exists for compatibility.
+    #'
+    #' @param state (`teal_slice`)
+    #'
+    #' @return `self`, invisibly.
+    #'
+    set_state = function(state) {
+      checkmate::assert_class(state, "teal_slice_expr")
+      invisible(self)
+    },
+
+    #' @description
+    #' Get reproducible call.
+    #'
+    #' @param dataname (`ignored`) for a consistency with `FilterState`
+    #'
+    #' Returns reproducible condition call for current selection relevant
+    #' for selected variable type.
+    #' Method is using internal reactive values which makes it reactive
+    #' and must be executed in reactive or isolated context.
+    #'
+    #' @return `call` or `NULL`
+    #'
+    get_call = function(dataname) {
+      isolate(str2lang(private$teal_slice$expr))
+    },
+
+    #' @description
+    #' Destroy observers stored in `private$observers`.
+    #'
+    #' @return `NULL`, invisibly.
+    #'
+    destroy_observers = function() {
+      lapply(private$observers, function(x) x$destroy())
+
+      if (!is.null(private$destroy_shiny)) {
+        private$destroy_shiny()
+      }
+      invisible(NULL)
+    },
+
+    # public shiny modules ----
+
+    #' @description
+    #' `shiny` module server.
+    #'
+    #' @param id (`character(1)`)
+    #'   `shiny` module instance id.
+    #'
+    #' @return Reactive expression signaling that the remove button has been clicked.
+    #'
+    server = function(id) {
+      moduleServer(
+        id = id,
+        function(input, output, session) {
+          private$server_summary("summary")
+
+          private$destroy_shiny <- function() {
+            logger::log_trace("Destroying FilterStateExpr inputs; id: { private$get_id() }")
+            # remove values from the input list
+            lapply(session$ns(names(input)), .subset2(input, "impl")$.values$remove)
+          }
+
+          reactive(input$remove) # back to parent to remove self
+        }
+      )
+    },
+
+    #' @description
+    #' `shiny` module UI.
+    #'  The UI for this class contains simple message stating that it is not supported.
+    #' @param id (`character(1)`)
+    #'   `shiny` module instance id.
+    #' @param parent_id (`character(1)`)
+    #'   id of the `FilterStates` card container.
+    ui = function(id, parent_id = "cards") {
+      ns <- NS(id)
+      isolate({
+        tags$div(
+          id = id,
+          class = "panel filter-card",
+          include_js_files("count-bar-labels.js"),
+          tags$div(
+            class = "filter-card-header",
+            tags$div(
+              class = "filter-card-title",
+              if (private$is_anchored()) {
+                icon("anchor-lock", class = "filter-card-icon")
+              } else {
+                icon("lock", class = "filter-card-icon")
+              },
+              div(class = "filter-card-varname", tags$strong(private$teal_slice$id)),
+              div(class = "filter-card-varlabel", private$teal_slice$title),
+              div(
+                class = "filter-card-controls",
+                if (isFALSE(private$is_anchored())) {
+                  actionLink(
+                    inputId = ns("remove"),
+                    label = icon("circle-xmark", lib = "font-awesome"),
+                    title = "Remove filter",
+                    class = "filter-card-remove"
+                  )
+                }
+              )
+            ),
+            tags$div(
+              class = "filter-card-summary",
+              private$ui_summary(ns("summary"))
+            )
+          )
+        )
+      })
+    }
+  ),
+
+  # private members ----
+
+  private = list(
+    observers = NULL, # stores observers
+    teal_slice = NULL, # stores reactiveValues
+    destroy_shiny = NULL, # function is set in server
+
+    # @description
+    # Get id of the teal_slice.
+    # @return `character(1)`
+    get_id = function() {
+      isolate(private$teal_slice$id)
+    },
+
+    # Check whether this filter is anchored (cannot be removed).
+    # @return `logical(1)`
+    is_anchored = function() {
+      isolate(isTRUE(private$teal_slice$anchored))
+    },
+
+    # @description
+    # Server module to display filter summary
+    # @param id `shiny` id parameter
+    ui_summary = function(id) {
+      ns <- NS(id)
+      uiOutput(ns("summary"), class = "filter-card-summary")
+    },
+
+    # @description
+    # UI module to display filter summary
+    # @param shiny `id` parameter passed to moduleServer
+    #  renders text describing current state
+    server_summary = function(id) {
+      moduleServer(
+        id = id,
+        function(input, output, session) {
+          output$summary <- renderUI(private$content_summary())
+        }
+      )
+    },
+    content_summary = function() {
+      isolate(private$teal_slice$expr)
+    }
+  )
+)

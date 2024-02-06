@@ -1,0 +1,342 @@
+# DateFilterState ------
+
+#' @name DateFilterState
+#' @docType class
+#'
+#' @title `FilterState` object for `Date` data
+#'
+#' @description Manages choosing a range of `Date`s.
+#'
+#' @keywords internal
+#'
+DateFilterState <- R6::R6Class( # nolint
+  "DateFilterState",
+  inherit = FilterState,
+
+  # public methods ----
+
+  public = list(
+
+    #' @description
+    #' Initialize a `FilterState` object.
+    #'
+    #' @param x (`Date`)
+    #'   variable to be filtered.
+    #' @param x_reactive (`reactive`)
+    #'   returning vector of the same type as `x`. Is used to update
+    #'   counts following the change in values of the filtered dataset.
+    #'   If it is set to `reactive(NULL)` then counts based on filtered
+    #'   dataset are not shown.
+    #' @param slice (`teal_slice`)
+    #'   specification of this filter state.
+    #'   `teal_slice` is stored in the object and `set_state` directly manipulates values within `teal_slice`.
+    #'   `get_state` returns `teal_slice` object which can be reused in other places.
+    #'   Note that `teal_slice` is a `reactiveValues`, which means it has reference semantics, i.e.
+    #'   changes made to an object are automatically reflected in all places that refer to the same `teal_slice`.
+    #' @param extract_type (`character`)
+    #'   specifying whether condition calls should be prefixed by `dataname`. Possible values:
+    #' - `character(0)` (default) `varname` in the condition call will not be prefixed
+    #' - `"list"` `varname` in the condition call will be returned as `<dataname>$<varname>`
+    #' - `"matrix"` `varname` in the condition call will be returned as `<dataname>[, <varname>]`
+    #'
+    #' @return Object of class `DateFilterState`, invisibly.
+    #'
+    initialize = function(x,
+                          x_reactive = reactive(NULL),
+                          slice,
+                          extract_type = character(0)) {
+      isolate({
+        checkmate::assert_date(x)
+        checkmate::assert_class(x_reactive, "reactive")
+
+        super$initialize(
+          x = x,
+          x_reactive = x_reactive,
+          slice = slice,
+          extract_type = extract_type
+        )
+        checkmate::assert_date(slice$choices, null.ok = TRUE)
+        private$set_choices(slice$choices)
+        if (is.null(slice$selected)) slice$selected <- slice$choices
+        private$set_selected(slice$selected)
+      })
+
+      invisible(self)
+    },
+
+    #' @description
+    #' Returns reproducible condition call for current selection.
+    #' For this class returned call looks like
+    #' `<varname> >= <min value> & <varname> <= <max value>` with optional `is.na(<varname>)`.
+    #' @param dataname (`character(1)`) containing possibly prefixed name of data set
+    #' @return `call` or `NULL`
+    #'
+    get_call = function(dataname) {
+      if (isFALSE(private$is_any_filtered())) {
+        return(NULL)
+      }
+      choices <- as.character(private$get_selected())
+      varname <- private$get_varname_prefixed(dataname)
+      filter_call <-
+        call(
+          "&",
+          call(">=", varname, call("as.Date", choices[1L])),
+          call("<=", varname, call("as.Date", choices[2L]))
+        )
+      private$add_keep_na_call(filter_call, varname)
+    }
+  ),
+
+  # private methods ----
+
+  private = list(
+    set_choices = function(choices) {
+      if (is.null(choices)) {
+        choices <- range(private$x, na.rm = TRUE)
+      } else {
+        choices_adjusted <- c(max(choices[1L], min(private$x)), min(choices[2L], max(private$x)))
+        if (any(choices != choices_adjusted)) {
+          warning(sprintf(
+            "Choices adjusted (some values outside of variable range). Varname: %s, dataname: %s.",
+            private$get_varname(), private$get_dataname()
+          ))
+          choices <- choices_adjusted
+        }
+        if (choices[1L] >= choices[2L]) {
+          warning(sprintf(
+            "Invalid choices: lower is higher / equal to upper, or not in range of variable values.
+            Setting defaults. Varname: %s, dataname: %s.",
+            private$get_varname(), private$get_dataname()
+          ))
+          choices <- range(private$x, na.rm = TRUE)
+        }
+      }
+      private$set_is_choice_limited(private$x, choices)
+      private$x <- private$x[(private$x >= choices[1L] & private$x <= choices[2L]) | is.na(private$x)]
+      private$teal_slice$choices <- choices
+      invisible(NULL)
+    },
+
+    # @description
+    # Check whether the initial choices filter out some values of x and set the flag in case.
+    set_is_choice_limited = function(xl, choices) {
+      private$is_choice_limited <- (any(xl < choices[1L], na.rm = TRUE) | any(xl > choices[2L], na.rm = TRUE))
+      invisible(NULL)
+    },
+    cast_and_validate = function(values) {
+      tryCatch(
+        expr = {
+          values <- as.Date(values, origin = "1970-01-01")
+          if (anyNA(values)) stop()
+          values
+        },
+        error = function(e) stop("Vector of set values must contain values coercible to Date.")
+      )
+    },
+    check_length = function(values) {
+      if (length(values) != 2) stop("Vector of set values must have length two.")
+      if (values[1] > values[2]) {
+        warning(
+          sprintf(
+            "Start date %s is set after the end date %s, the values will be replaced with a default date range.",
+            values[1], values[2]
+          )
+        )
+        values <- isolate(private$get_choices())
+      }
+      values
+    },
+    remove_out_of_bounds_values = function(values) {
+      choices <- private$get_choices()
+      if (values[1] < choices[1L] | values[1] > choices[2L]) {
+        warning(
+          sprintf(
+            "Value: %s is outside of the possible range for column %s of dataset %s, setting minimum possible value.",
+            values[1], private$get_varname(), private$get_dataname()
+          )
+        )
+        values[1] <- choices[1L]
+      }
+
+      if (values[2] > choices[2L] | values[2] < choices[1L]) {
+        warning(
+          sprintf(
+            "Value: %s is outside of the possible range for column %s of dataset %s, setting maximum possible value.",
+            values[2], private$get_varname(), private$get_dataname()
+          )
+        )
+        values[2] <- choices[2L]
+      }
+
+      values
+    },
+
+    # shiny modules ----
+
+    # @description
+    # UI Module for `DateFilterState`.
+    # This UI element contains two date selections for `min` and `max`
+    # of the range and a checkbox whether to keep the `NA` values.
+    # @param id (`character(1)`) `shiny` module instance id.
+    ui_inputs = function(id) {
+      ns <- NS(id)
+      isolate({
+        div(
+          div(
+            class = "flex",
+            actionButton(
+              class = "date_reset_button",
+              inputId = ns("start_date_reset"),
+              label = NULL,
+              icon = icon("fas fa-undo")
+            ),
+            div(
+              class = "w-80 filter_datelike_input",
+              dateRangeInput(
+                inputId = ns("selection"),
+                label = NULL,
+                start = private$get_selected()[1],
+                end = private$get_selected()[2],
+                min = private$get_choices()[1L],
+                max = private$get_choices()[2L],
+                width = "100%"
+              )
+            ),
+            actionButton(
+              class = "date_reset_button",
+              inputId = ns("end_date_reset"),
+              label = NULL,
+              icon = icon("fas fa-undo")
+            )
+          ),
+          private$keep_na_ui(ns("keep_na"))
+        )
+      })
+    },
+
+    # @description
+    # Server module
+    # @param id (`character(1)`) `shiny` module instance id.
+    # @return `NULL`.
+    server_inputs = function(id) {
+      moduleServer(
+        id = id,
+        function(input, output, session) {
+          logger::log_trace("DateFilterState$server initializing, id: { private$get_id() }")
+
+          # this observer is needed in the situation when teal_slice$selected has been
+          # changed directly by the api - then it's needed to rerender UI element
+          # to show relevant values
+          private$observers$seletion_api <- observeEvent(
+            ignoreNULL = TRUE, # dates needs to be selected
+            ignoreInit = TRUE,
+            eventExpr = private$get_selected(),
+            handlerExpr = {
+              if (!setequal(private$get_selected(), input$selection)) {
+                logger::log_trace("DateFilterState$server@1 state changed, id: { private$get_id() }")
+                updateDateRangeInput(
+                  session = session,
+                  inputId = "selection",
+                  start = private$get_selected()[1],
+                  end = private$get_selected()[2]
+                )
+              }
+            }
+          )
+
+          private$observers$selection <- observeEvent(
+            ignoreNULL = TRUE, # dates needs to be selected
+            ignoreInit = TRUE, # ignoreInit: should not matter because we set the UI with the desired initial state
+            eventExpr = input$selection,
+            handlerExpr = {
+              logger::log_trace("DateFilterState$server@2 selection changed, id: { private$get_id() }")
+              start_date <- input$selection[1]
+              end_date <- input$selection[2]
+
+              if (is.na(start_date) || is.na(end_date) || start_date > end_date) {
+                updateDateRangeInput(
+                  session = session,
+                  inputId = "selection",
+                  start = private$get_selected()[1],
+                  end = private$get_selected()[2]
+                )
+                showNotification(
+                  "Start date must not be greater than the end date. Setting back to previous value.",
+                  type = "warning"
+                )
+                return(NULL)
+              }
+
+              private$set_selected(c(start_date, end_date))
+            }
+          )
+
+
+          private$keep_na_srv("keep_na")
+
+          private$observers$reset1 <- observeEvent(input$start_date_reset, {
+            logger::log_trace("DateFilterState$server@3 reset start date, id: { private$get_id() }")
+            updateDateRangeInput(
+              session = session,
+              inputId = "selection",
+              start = private$get_choices()[1L]
+            )
+          })
+
+          private$observers$reset2 <- observeEvent(input$end_date_reset, {
+            logger::log_trace("DateFilterState$server@4 reset end date, id: { private$get_id() }")
+            updateDateRangeInput(
+              session = session,
+              inputId = "selection",
+              end = private$get_choices()[2L]
+            )
+          })
+
+          logger::log_trace("DateFilterState$server initialized, id: { private$get_id() }")
+          NULL
+        }
+      )
+    },
+    server_inputs_fixed = function(id) {
+      moduleServer(
+        id = id,
+        function(input, output, session) {
+          logger::log_trace("DateFilterState$server initializing, id: { private$get_id() }")
+
+          output$selection <- renderUI({
+            vals <- format(private$get_selected(), nsmall = 3)
+            div(
+              div(icon("calendar-days"), vals[1]),
+              div(span(" - "), icon("calendar-days"), vals[2])
+            )
+          })
+
+          logger::log_trace("DateFilterState$server initialized, id: { private$get_id() }")
+          NULL
+        }
+      )
+    },
+
+    # @description
+    # Server module to display filter summary
+    #  renders text describing selected date range and
+    #  if NA are included also
+    content_summary = function(id) {
+      selected <- as.character(private$get_selected())
+      min <- selected[1]
+      max <- selected[2]
+      tagList(
+        tags$span(
+          class = "filter-card-summary-value",
+          HTML(min, "&ndash;", max)
+        ),
+        tags$span(
+          class = "filter-card-summary-controls",
+          if (private$na_count > 0) {
+            tags$span("NA", if (isTRUE(private$get_keep_na())) icon("check") else icon("xmark"))
+          }
+        )
+      )
+    }
+  )
+)

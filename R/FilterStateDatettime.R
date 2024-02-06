@@ -1,0 +1,449 @@
+# DatetimeFilterState ------
+
+#' @rdname DatetimeFilterState
+#' @docType class
+#'
+#' @title `FilterState` object for date time data
+#'
+#' @description  Manages choosing a range of date-times.
+#'
+#' @keywords internal
+#'
+DatetimeFilterState <- R6::R6Class( # nolint
+  "DatetimeFilterState",
+  inherit = FilterState,
+
+  # public methods ----
+
+  public = list(
+
+    #' @description
+    #' Initialize a `FilterState` object. This class
+    #' has an extra field, `private$timezone`, which is set to `Sys.timezone()` by
+    #' default. However, in case when using this module in `teal` app, one needs
+    #' timezone of the app user. App user timezone is taken from `session$userData$timezone`
+    #' and is set only if object is initialized in `shiny`.
+    #'
+    #' @param x (`POSIXct` or `POSIXlt`)
+    #'   variable to be filtered.
+    #' @param x_reactive (`reactive`)
+    #'   returning vector of the same type as `x`. Is used to update
+    #'   counts following the change in values of the filtered dataset.
+    #'   If it is set to `reactive(NULL)` then counts based on filtered
+    #'   dataset are not shown.
+    #' @param slice (`teal_slice`)
+    #'   specification of this filter state.
+    #'   `teal_slice` is stored in the object and `set_state` directly manipulates values within `teal_slice`.
+    #'   `get_state` returns `teal_slice` object which can be reused in other places.
+    #'   Note that `teal_slice` is a `reactiveValues`, which means it has reference semantics, i.e.
+    #'   changes made to an object are automatically reflected in all places that refer to the same `teal_slice`.
+    #' @param extract_type (`character`)
+    #'   specifying whether condition calls should be prefixed by `dataname`. Possible values:
+    #' - `character(0)` (default) `varname` in the condition call will not be prefixed
+    #' - `"list"` `varname` in the condition call will be returned as `<dataname>$<varname>`
+    #' - `"matrix"` `varname` in the condition call will be returned as `<dataname>[, <varname>]`
+    #'
+    #' @return Object of class `DatetimeFilterState`, invisibly.
+    #'
+    initialize = function(x,
+                          x_reactive = reactive(NULL),
+                          extract_type = character(0),
+                          slice) {
+      isolate({
+        checkmate::assert_multi_class(x, c("POSIXct", "POSIXlt"))
+        checkmate::assert_class(x_reactive, "reactive")
+
+        super$initialize(
+          x = x,
+          x_reactive = x_reactive,
+          slice = slice,
+          extract_type = extract_type
+        )
+        checkmate::assert_multi_class(slice$choices, c("POSIXct", "POSIXlt"), null.ok = TRUE)
+        private$set_choices(slice$choices)
+        if (is.null(slice$selected)) slice$selected <- slice$choices
+        private$set_selected(slice$selected)
+      })
+
+      invisible(self)
+    },
+
+    #' @description
+    #' Returns reproducible condition call for current selection.
+    #' For this class returned call looks like
+    #' `<varname> >= as.POSIXct(<min>) & <varname> <= <max>)` with optional `is.na(<varname>)`.
+    #' @param dataname name of data set; defaults to `private$get_dataname()`
+    #' @return `call`
+    #'
+    get_call = function(dataname) {
+      if (isFALSE(private$is_any_filtered())) {
+        return(NULL)
+      }
+      if (missing(dataname)) dataname <- private$get_dataname()
+      varname <- private$get_varname_prefixed(dataname)
+      choices <- private$get_selected()
+      tzone <- Find(function(x) x != "", attr(as.POSIXlt(choices), "tzone"))
+      class <- class(choices)[1L]
+      date_fun <- as.name(
+        switch(class,
+          "POSIXct" = "as.POSIXct",
+          "POSIXlt" = "as.POSIXlt"
+        )
+      )
+      choices <- as.character(choices + c(0, 1))
+      filter_call <-
+        call(
+          "&",
+          call(
+            ">=",
+            varname,
+            as.call(list(date_fun, choices[1L], tz = tzone))
+          ),
+          call(
+            "<",
+            varname,
+            as.call(list(date_fun, choices[2L], tz = tzone))
+          )
+        )
+      private$add_keep_na_call(filter_call, varname)
+    }
+  ),
+
+  # private members ----
+
+  private = list(
+    # private methods ----
+    set_choices = function(choices) {
+      if (is.null(choices)) {
+        choices <- as.POSIXct(trunc(range(private$x, na.rm = TRUE), units = "secs"))
+      } else {
+        choices <- as.POSIXct(choices, units = "secs")
+        choices_adjusted <- c(
+          max(choices[1L], min(as.POSIXct(private$x), na.rm = TRUE)),
+          min(choices[2L], max(as.POSIXct(private$x), na.rm = TRUE))
+        )
+        if (any(choices != choices_adjusted)) {
+          warning(sprintf(
+            "Choices adjusted (some values outside of variable range). Varname: %s, dataname: %s.",
+            private$get_varname(), private$get_dataname()
+          ))
+          choices <- choices_adjusted
+        }
+        if (choices[1L] >= choices[2L]) {
+          warning(sprintf(
+            "Invalid choices: lower is higher / equal to upper, or not in range of variable values.
+            Setting defaults. Varname: %s, dataname: %s.",
+            private$get_varname(), private$get_dataname()
+          ))
+          choices <- range(private$x, na.rm = TRUE)
+        }
+      }
+
+      private$set_is_choice_limited(private$x, choices)
+      private$x <- private$x[
+        (
+          as.POSIXct(trunc(private$x, units = "secs")) >= choices[1L] &
+            as.POSIXct(trunc(private$x, units = "secs")) <= choices[2L]
+        ) | is.na(private$x)
+      ]
+      private$teal_slice$choices <- choices
+      invisible(NULL)
+    },
+
+    # @description
+    # Check whether the initial choices filter out some values of x and set the flag in case.
+    set_is_choice_limited = function(xl, choices = NULL) {
+      private$is_choice_limited <- (any(xl < choices[1L], na.rm = TRUE) | any(xl > choices[2L], na.rm = TRUE))
+      invisible(NULL)
+    },
+    cast_and_validate = function(values) {
+      tryCatch(
+        expr = {
+          values <- as.POSIXct(values, origin = "1970-01-01 00:00:00")
+          if (anyNA(values)) stop()
+          values
+        },
+        error = function(e) stop("Vector of set values must contain values coercible to POSIX.")
+      )
+    },
+    check_length = function(values) {
+      if (length(values) != 2) stop("Vector of set values must have length two.")
+      if (values[1] > values[2]) {
+        warning(
+          sprintf(
+            "Start date '%s' is set after the end date '%s', the values will be replaced by a default datetime range.",
+            values[1], values[2]
+          )
+        )
+        values <- isolate(private$get_choices())
+      }
+      values
+    },
+    remove_out_of_bounds_values = function(values) {
+      choices <- private$get_choices()
+      if (values[1] < choices[1L] || values[1] > choices[2L]) {
+        warning(
+          sprintf(
+            "Value: %s is outside of the range for the column '%s' in dataset '%s', setting minimum possible value.",
+            values[1], private$get_varname(), toString(private$get_dataname())
+          )
+        )
+        values[1] <- choices[1L]
+      }
+
+      if (values[2] > choices[2L] | values[2] < choices[1L]) {
+        warning(
+          sprintf(
+            "Value: '%s' is outside of the range for the column '%s' in dataset '%s', setting maximum possible value.",
+            values[2], private$get_varname(), toString(private$get_dataname())
+          )
+        )
+        values[2] <- choices[2L]
+      }
+
+      values
+    },
+
+    # shiny modules ----
+
+    # @description
+    # UI Module for `DatetimeFilterState`.
+    # This UI element contains two date-time selections for `min` and `max`
+    # of the range and a checkbox whether to keep the `NA` values.
+    # @param id (`character(1)`) `shiny` module instance id.
+    ui_inputs = function(id) {
+      ns <- NS(id)
+
+      isolate({
+        ui_input_1 <- shinyWidgets::airDatepickerInput(
+          inputId = ns("selection_start"),
+          value = private$get_selected()[1],
+          startView = private$get_selected()[1],
+          timepicker = TRUE,
+          minDate = private$get_choices()[1L],
+          maxDate = private$get_choices()[2L],
+          update_on = "close",
+          addon = "none",
+          position = "bottom right"
+        )
+        ui_input_2 <- shinyWidgets::airDatepickerInput(
+          inputId = ns("selection_end"),
+          value = private$get_selected()[2],
+          startView = private$get_selected()[2],
+          timepicker = TRUE,
+          minDate = private$get_choices()[1L],
+          maxDate = private$get_choices()[2L],
+          update_on = "close",
+          addon = "none",
+          position = "bottom right"
+        )
+        ui_reset_1 <- actionButton(
+          class = "date_reset_button",
+          inputId = ns("start_date_reset"),
+          label = NULL,
+          icon = icon("fas fa-undo")
+        )
+        ui_reset_2 <- actionButton(
+          class = "date_reset_button",
+          inputId = ns("end_date_reset"),
+          label = NULL,
+          icon = icon("fas fa-undo")
+        )
+        ui_input_1$children[[2]]$attribs <- c(ui_input_1$children[[2]]$attribs, list(class = "input-sm"))
+        ui_input_2$children[[2]]$attribs <- c(ui_input_2$children[[2]]$attribs, list(class = "input-sm"))
+
+        div(
+          div(
+            class = "flex",
+            ui_reset_1,
+            div(
+              class = "flex w-80 filter_datelike_input",
+              div(class = "w-45 text-center", ui_input_1),
+              span(
+                class = "input-group-addon w-10",
+                span(class = "input-group-text w-100 justify-content-center", "to"),
+                title = "Times are displayed in the local timezone and are converted to UTC in the analysis"
+              ),
+              div(class = "w-45 text-center", ui_input_2)
+            ),
+            ui_reset_2
+          ),
+          private$keep_na_ui(ns("keep_na"))
+        )
+      })
+    },
+
+    # @description
+    # Server module
+    # @param id (`character(1)`) `shiny` module instance id.
+    # @return `NULL`.
+    server_inputs = function(id) {
+      moduleServer(
+        id = id,
+        function(input, output, session) {
+          logger::log_trace("DatetimeFilterState$server initializing, id: { private$get_id() }")
+          # this observer is needed in the situation when teal_slice$selected has been
+          # changed directly by the api - then it's needed to rerender UI element
+          # to show relevant values
+          private$observers$selection_api <- observeEvent(
+            ignoreNULL = TRUE, # dates needs to be selected
+            ignoreInit = TRUE, # on init selected == default, so no need to trigger
+            eventExpr = private$get_selected(),
+            handlerExpr = {
+              start_date <- input$selection_start
+              end_date <- input$selection_end
+              if (!all(private$get_selected() == c(start_date, end_date))) {
+                logger::log_trace("DatetimeFilterState$server@1 state changed, id: { private$get_id() }")
+                if (private$get_selected()[1] != start_date) {
+                  shinyWidgets::updateAirDateInput(
+                    session = session,
+                    inputId = "selection_start",
+                    value = private$get_selected()[1]
+                  )
+                }
+
+                if (private$get_selected()[2] != end_date) {
+                  shinyWidgets::updateAirDateInput(
+                    session = session,
+                    inputId = "selection_end",
+                    value = private$get_selected()[2]
+                  )
+                }
+              }
+            }
+          )
+
+
+          private$observers$selection_start <- observeEvent(
+            ignoreNULL = TRUE, # dates needs to be selected
+            ignoreInit = TRUE, # ignoreInit: should not matter because we set the UI with the desired initial state
+            eventExpr = input$selection_start,
+            handlerExpr = {
+              logger::log_trace("DatetimeFilterState$server@2 selection changed, id: { private$get_id() }")
+              start_date <- input$selection_start
+              end_date <- private$get_selected()[[2]]
+              tzone <- Find(function(x) x != "", attr(as.POSIXlt(private$get_choices()), "tzone"))
+              attr(start_date, "tzone") <- tzone
+
+              if (start_date > end_date) {
+                showNotification(
+                  "Start date must not be greater than the end date. Ignoring selection.",
+                  type = "warning"
+                )
+                shinyWidgets::updateAirDateInput(
+                  session = session,
+                  inputId = "selection_start",
+                  value = private$get_selected()[1] # sets back to latest selected value
+                )
+                return(NULL)
+              }
+
+              private$set_selected(c(start_date, end_date))
+            }
+          )
+
+          private$observers$selection_end <- observeEvent(
+            ignoreNULL = TRUE, # dates needs to be selected
+            ignoreInit = TRUE, # ignoreInit: should not matter because we set the UI with the desired initial state
+            eventExpr = input$selection_end,
+            handlerExpr = {
+              start_date <- private$get_selected()[1]
+              end_date <- input$selection_end
+              tzone <- Find(function(x) x != "", attr(as.POSIXlt(private$get_choices()), "tzone"))
+              attr(end_date, "tzone") <- tzone
+
+              if (start_date > end_date) {
+                showNotification(
+                  "End date must not be lower than the start date. Ignoring selection.",
+                  type = "warning"
+                )
+                shinyWidgets::updateAirDateInput(
+                  session = session,
+                  inputId = "selection_end",
+                  value = private$get_selected()[2] # sets back to latest selected value
+                )
+                return(NULL)
+              }
+
+              private$set_selected(c(start_date, end_date))
+              logger::log_trace("DatetimeFilterState$server@2 selection changed, id: { private$get_id() }")
+            }
+          )
+
+          private$keep_na_srv("keep_na")
+
+          private$observers$reset1 <- observeEvent(
+            ignoreInit = TRUE, # reset button shouldn't be trigger on init
+            ignoreNULL = TRUE, # it's impossible and wrong to set default to NULL
+            input$start_date_reset,
+            {
+              shinyWidgets::updateAirDateInput(
+                session = session,
+                inputId = "selection_start",
+                value = private$get_choices()[1L]
+              )
+              logger::log_trace("DatetimeFilterState$server@2 reset start date, id: { private$get_id() }")
+            }
+          )
+          private$observers$reset2 <- observeEvent(
+            ignoreInit = TRUE, # reset button shouldn't be trigger on init
+            ignoreNULL = TRUE, # it's impossible and wrong to set default to NULL
+            input$end_date_reset,
+            {
+              shinyWidgets::updateAirDateInput(
+                session = session,
+                inputId = "selection_end",
+                value = private$get_choices()[2L]
+              )
+              logger::log_trace("DatetimeFilterState$server@3 reset end date, id: { private$get_id() }")
+            }
+          )
+
+          logger::log_trace("DatetimeFilterState$server initialized, id: { private$get_id() }")
+          NULL
+        }
+      )
+    },
+    server_inputs_fixed = function(id) {
+      moduleServer(
+        id = id,
+        function(input, output, session) {
+          logger::log_trace("DatetimeFilterState$server initializing, id: { private$get_id() }")
+
+          output$selection <- renderUI({
+            vals <- format(private$get_selected(), usetz = TRUE, nsmall = 3)
+            div(
+              div(icon("clock"), vals[1]),
+              div(span(" - "), icon("clock"), vals[2])
+            )
+          })
+
+          logger::log_trace("DatetimeFilterState$server initialized, id: { private$get_id() }")
+          NULL
+        }
+      )
+    },
+
+    # @description
+    # UI module to display filter summary
+    #  renders text describing selected date range and
+    #  if NA are included also
+    content_summary = function(id) {
+      selected <- format(private$get_selected(), "%Y-%m-%d %H:%M:%S")
+      min <- selected[1]
+      max <- selected[2]
+      tagList(
+        tags$span(
+          class = "filter-card-summary-value",
+          HTML(min, "&ndash;", max)
+        ),
+        tags$span(
+          class = "filter-card-summary-controls",
+          if (private$na_count > 0) {
+            tags$span("NA", if (isTRUE(private$get_keep_na())) icon("check") else icon("xmark"))
+          }
+        )
+      )
+    }
+  )
+)

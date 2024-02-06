@@ -1,0 +1,435 @@
+/* teal.slice filter-panel css */
+
+.relative {
+  position: relative;
+}
+
+.inline-block {
+  position: inline-block;
+}
+
+.flex {
+  display: flex;
+}
+
+.float-right {
+  float: right;
+}
+
+.float-left {
+  float: left;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.w-80 {
+  width: 80%;
+}
+
+.w-45 {
+  width: 45%;
+}
+
+.w-10 {
+  width: 10%;
+}
+
+.m-auto {
+  margin: auto;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.mr-4 {
+  margin-right: 1rem;
+}
+
+.justify-content-center {
+  justify-content: center;
+}
+
+.justify-content-right {
+  justify-content: flex-end;
+}
+
+.date_reset_button {
+  padding: 0;
+  padding-top: 4px;
+  padding-bottom: 5px;
+  width: 10%;
+  height: 3rem;
+}
+
+.text-primary.mb-4 {
+  font-weight: 700;
+}
+
+.filter_datelike_input input {
+  height: 3rem !important;
+  text-align: center !important;
+  font-size: 1rem !important;
+}
+
+.filter_datelike_input span.input-group-text {
+  height: 3rem !important;
+}
+
+.filter_datelike_input span.input-group-addon {
+  height: 3rem !important;
+}
+
+.no-left-right-padding {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-bottom: 10px;
+}
+
+#teal_filter_panel_whole > div.well div.form-group label {
+  width: 100%;
+}
+
+#teal_filter_active_vars p {
+  margin-bottom: 0;
+}
+
+.filter-panel-active-header {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25em;
+}
+
+.filter-panel-active-header span:first-child {
+  margin-right: auto;
+}
+
+a.remove {
+  font-weight: normal;
+  float: right;
+  border: 0;
+  background-color: transparent;
+  color: rgba(0, 0, 0, 0.3);
+  font-weight: 100;
+  font-size: 0.9em;
+  padding: 2px 4px;
+  margin-top: 0;
+}
+
+a.remove:hover {
+  color: #337ab7;
+}
+
+a.remove_all {
+  font-weight: normal;
+  float: right;
+  border: 0;
+  background-color: transparent;
+  color: rgb(136, 0, 0, 0.72);
+  font-weight: 100;
+  font-size: 0.9em;
+  padding: 2px 4px;
+  margin-top: 0;
+  opacity: 50%;
+}
+
+a.remove_all:hover {
+  color: #d40000;
+}
+
+.choices_state label {
+  display: flex;
+  gap: 5px;
+}
+
+.choices_state label > input {
+  flex-grow: 0;
+}
+
+.choices_state label > span {
+  flex-grow: 4;
+}
+
+.choices_state > div.form-group {
+  margin: 0em;
+}
+
+.choices_state_label_text {
+  position: absolute;
+  padding: 2px;
+  margin-top: -3px;
+}
+
+.choices_state_label {
+  background-color:lightblue;
+  height:2rem;
+  display:inline-block;
+  position:absolute;
+  margin-top: -3px;
+}
+
+.choices_state_label_unfiltered {
+  background-color:lightgray;
+  height: 2rem;
+  margin-top: -3px;
+  display:inline-block;
+  position: absolute;
+}
+
+.filterPlotOverlayRange {
+  animation: 0.75s ease-out 0s 1 shinyDataFilterEnlargeY,
+    0.5s ease-in 0s 1 shinyDataFilterFadeIn;
+  transform-origin: bottom;
+  width: 100%;
+  max-width: 100%;
+}
+
+.filter-card-body div.form-group {
+  margin: 0em;
+  font-size: small;
+}
+
+.checkbox label {
+  margin: 0em;
+}
+
+.irs.irs--shiny.js-irs-0.irs-with-grid * {
+  font-size: 0.85em;
+}
+
+.filter_panel_dataname {
+  font-weight: bold;
+}
+
+.filter_panel_varname {
+  font-weight: bold;
+  width: 100%;
+}
+
+.filter_panel_varlabel {
+  font-size: small;
+  font-weight: normal;
+  margin-left: 3px;
+  color: rgb(122, 122, 122);
+}
+
+.parent-hideable-list-group > .accordion:not([data-label=""]):before {
+  padding: 2px 4px;
+  font-size: 90%;
+  color: #c7254e;
+  background-color: #f9f2f4;
+  border-radius: 4px;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+
+  display: inline-block;
+  max-width: 100%;
+  margin-bottom: 5px;
+  font-weight: 700;
+
+  content: attr(data-label);
+}
+
+/* filter summary table */
+.custom-table td:nth-child(1),
+.custom-table thead {
+  font-weight: bold;
+}
+
+.teal_active_summary_filter_panel {
+  overflow-x: auto;
+}
+
+/* .panel class needed for bs3 accordion to work properly
+  it's styles need to be overwritten to have consistent look
+ */
+.panel {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0em;
+}
+
+.filter-card-header {
+  color: var(--bs-body-color, #333333);
+  padding: 5px 10px;
+  border: 1px solid var(--bs-gray-300, #dee2e6);
+  border-radius: 0.25em;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-card-header:not(.collapsed) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.filter-card-header:hover,
+.filter-card-body:hover {
+  background-color: var(--bs-gray-200, #e9ecef);
+}
+
+.filter-card-title {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+.filter-card-icon {
+  padding-right: 0.25em;
+}
+.filter-card-varname {
+  flex: 0 0.4 auto;
+  justify-self: flex-start;
+
+  overflow: hidden;
+}
+.filter-card-varlabel {
+  flex: 1 1 auto;
+  justify-self: flex-start;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 0.5em;
+
+  color: var(--bs-gray-500, var(--gray, darkgray));
+}
+.filter-card-controls {
+  flex: 0 0 auto;
+  justify-self: flex-end;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 0.75em;
+}
+
+.filter-card-summary {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+.filter-card-summary-value {
+  flex: 1 1 auto;
+  justify-content: space-between;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  padding-right: 0.5em
+}
+.filter-card-summary-controls {
+  flex: 0 0 auto;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+
+  gap: 1em;
+}
+
+.fa-check {
+  color: var(--bs-success, var(--success, #3c763d))
+}
+
+.fa-xmark {
+  color: var(--bs-danger, var(--danger, #a94442))
+}
+
+.filter-card-remove,
+.filter-card-remove:hover {
+  color: var(--bs-body-color, var(--dark, #333333));
+}
+
+.filter-card-body {
+  border: 1px solid var(--bs-gray-300, #dee2e6);
+  border-top: none;
+  border-bottom-left-radius: 0.25rem;
+  border-bottom-right-radius: 0.25rem;
+  padding: 5px 10px;
+}
+
+.filter-card-body-keep-na-inf {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.progress.state-count-container {
+  height: 1.75em;
+  width: 90%;
+  background-color: white;
+  margin: 0em;
+  border-radius: 0px;
+}
+
+.progress-bar.state-count-bar-filtered {
+  background-color: lightblue !important;
+  color: var(--bs-body-color, var(--dark, #333333));
+  overflow: visible;
+  text-align: left;
+  white-space: nowrap;
+  font-size: small;
+}
+
+.progress-bar.state-count-bar-unfiltered {
+  background-color: rgba(173, 216, 230, 0.439) !important;
+}
+
+.input-daterange > input {
+  font-size: 1em !important;
+}
+
+.input-group-prepend {
+ font-size: 1em !important;;
+}
+
+
+.filter_datelike_input  input {
+  font-size: 1em !important;
+}
+
+.form-group .checkbox label .shiny-bound-input {
+  margin-top: 0.1em;
+}
+
+
+
+.choices_state {
+  margin-bottom: .45rem;
+}
+
+.popover-header {
+  margin-top: 0em;
+}
+
+.popover-body {
+  margin-bottom: -1rem;
+}
+
+.available-filters {
+  margin-top: 0em;
+}
+
+.menu-content {
+  min-width: 15em;
+}
+
+.snapshot_table_row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.snapshot_table_row *:first-child {
+  flex: 1 1 80%;
+}
+
+.snapshot_table_row * + * {
+  flex: 1 0 50px;
+  padding: 0em 1em;
+}
