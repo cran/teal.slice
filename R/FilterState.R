@@ -96,7 +96,7 @@ FilterState <- R6::R6Class( # nolint
       if (is.null(isolate(slice$keep_na)) && anyNA(x)) slice$keep_na <- TRUE
       private$teal_slice <- slice
       # Obtain variable label.
-      varlabel <- attr(x, "label")
+      varlabel <- attr(x, "label", exact = TRUE)
       # Display only when different from varname.
       private$varlabel <-
         if (is.null(varlabel) || identical(varlabel, private$get_varname())) {
@@ -149,7 +149,7 @@ FilterState <- R6::R6Class( # nolint
     set_state = function(state) {
       checkmate::assert_class(state, "teal_slice")
       if (private$is_fixed()) {
-        logger::log_warn("attempt to set state on fixed filter aborted id: { private$get_id() }")
+        warning("attempt to set state on fixed filter aborted id: ", private$get_id())
       } else {
         logger::log_trace("{ class(self)[1] }$set_state setting state of filter id: { private$get_id() }")
         isolate({
@@ -296,16 +296,16 @@ FilterState <- R6::R6Class( # nolint
       ### Title consists of conditional icon, varname, conditional varlabel, and controls, arranged in a row.
       ### Summary consists of value and controls, arranged in a row.
 
-      div(
+      tags$div(
         id = id,
         class = "panel filter-card",
         include_js_files("count-bar-labels.js"),
-        div(
+        tags$div(
           class = "filter-card-header",
           `data-toggle` = "collapse",
           `data-bs-toggle` = "collapse",
           href = paste0("#", ns("body")),
-          div(
+          tags$div(
             class = "filter-card-title",
             if (private$is_anchored() && private$is_fixed()) {
               icon("anchor-lock", class = "filter-card-icon")
@@ -314,9 +314,9 @@ FilterState <- R6::R6Class( # nolint
             } else if (!private$is_anchored() && private$is_fixed()) {
               icon("lock", class = "filter-card-icon")
             },
-            div(class = "filter-card-varname", strong(private$get_varname())),
-            div(class = "filter-card-varlabel", private$get_varlabel()),
-            div(
+            tags$div(class = "filter-card-varname", tags$strong(private$get_varname())),
+            tags$div(class = "filter-card-varlabel", private$get_varlabel()),
+            tags$div(
               class = "filter-card-controls",
               # Suppress toggling body when clicking on this div.
               # This is for bootstrap 3 and 4. Causes page to scroll to top, prevented by setting href on buttons.
@@ -354,14 +354,14 @@ FilterState <- R6::R6Class( # nolint
               }
             )
           ),
-          div(class = "filter-card-summary", private$ui_summary(ns("summary")))
+          tags$div(class = "filter-card-summary", private$ui_summary(ns("summary")))
         ),
-        div(
+        tags$div(
           id = ns("body"),
           class = "collapse out",
           `data-parent` = paste0("#", parent_id),
           `data-bs-parent` = paste0("#", parent_id),
-          div(
+          tags$div(
             class = "filter-card-body",
             if (private$is_fixed()) {
               private$ui_inputs_fixed(ns("inputs"))
@@ -692,7 +692,7 @@ FilterState <- R6::R6Class( # nolint
     # @param id (`character(1)`) `shiny` module instance id.
     ui_inputs_fixed = function(id) {
       ns <- NS(id)
-      div(
+      tags$div(
         class = "choices_state",
         uiOutput(ns("selection"))
       )
@@ -717,7 +717,7 @@ FilterState <- R6::R6Class( # nolint
           countnow <- private$filtered_na_count()
           ui_input <- checkboxInput(
             inputId = ns("value"),
-            label = span(
+            label = tags$span(
               id = ns("count_label"),
               make_count_text(
                 label = "Keep NA",
@@ -727,7 +727,7 @@ FilterState <- R6::R6Class( # nolint
             ),
             value = private$get_keep_na()
           )
-          div(
+          tags$div(
             uiOutput(ns("trigger_visible"), inline = TRUE),
             ui_input
           )

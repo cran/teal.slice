@@ -4,6 +4,31 @@
 #' @docType class
 #' @title The `DataframeFilteredDataset` `R6` class
 #'
+#' @examples
+#' # use non-exported function from teal.slice
+#' DataframeFilteredDataset <- getFromNamespace("DataframeFilteredDataset", "teal.slice")
+#'
+#' library(shiny)
+#'
+#' ds <- DataframeFilteredDataset$new(iris, "iris")
+#' ds$set_filter_state(
+#'   teal_slices(
+#'     teal_slice(dataname = "iris", varname = "Species", selected = "virginica"),
+#'     teal_slice(dataname = "iris", varname = "Petal.Length", selected = c(2.0, 5))
+#'   )
+#' )
+#' isolate(ds$get_filter_state())
+#' isolate(ds$get_call())
+#'
+#' ## set_filter_state
+#' dataset <- DataframeFilteredDataset$new(iris, "iris")
+#' fs <- teal_slices(
+#'   teal_slice(dataname = "iris", varname = "Species", selected = "virginica"),
+#'   teal_slice(dataname = "iris", varname = "Petal.Length", selected = c(2.0, 5))
+#' )
+#' dataset$set_filter_state(state = fs)
+#' isolate(dataset$get_filter_state())
+#'
 #' @keywords internal
 #'
 DataframeFilteredDataset <- R6::R6Class( # nolint
@@ -20,8 +45,8 @@ DataframeFilteredDataset <- R6::R6Class( # nolint
     #'  single `data.frame` for which filters are rendered.
     #' @param dataname (`character(1)`)
     #'  syntactically valid name given to the dataset.
-    #' @param keys (`character`)
-    #'   optional vector of primary key column names.
+    #' @param keys (`character`) optional
+    #'  vector of primary key column names.
     #' @param parent_name (`character(1)`)
     #'   name of the parent dataset.
     #' @param parent (`reactive`)

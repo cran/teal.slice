@@ -4,6 +4,31 @@
 #' @docType class
 #' @title `MAEFilteredDataset` `R6` class
 #'
+#' @examplesIf requireNamespace("MultiAssayExperiment")
+#' # use non-exported function from teal.slice
+#' MAEFilteredDataset <- getFromNamespace("MAEFilteredDataset", "teal.slice")
+#'
+#' data(miniACC, package = "MultiAssayExperiment")
+#' dataset <- MAEFilteredDataset$new(miniACC, "MAE")
+#' fs <- teal_slices(
+#'   teal_slice(
+#'     dataname = "MAE", varname = "years_to_birth", selected = c(30, 50), keep_na = TRUE
+#'   ),
+#'   teal_slice(
+#'     dataname = "MAE", varname = "vital_status", selected = "1", keep_na = FALSE
+#'   ),
+#'   teal_slice(
+#'     dataname = "MAE", varname = "gender", selected = "female", keep_na = TRUE
+#'   ),
+#'   teal_slice(
+#'     dataname = "MAE", varname = "ARRAY_TYPE", selected = "", keep_na = TRUE
+#'   )
+#' )
+#' dataset$set_filter_state(state = fs)
+#'
+#' library(shiny)
+#' isolate(dataset$get_filter_state())
+#'
 #' @keywords internal
 #'
 MAEFilteredDataset <- R6::R6Class( # nolint
@@ -19,8 +44,8 @@ MAEFilteredDataset <- R6::R6Class( # nolint
     #'  single `MulitiAssayExperiment` for which filters are rendered.
     #' @param dataname (`character(1)`)
     #'  syntactically valid name given to the dataset.
-    #' @param keys (`character`)
-    #'   optional vector of primary key column names.
+    #' @param keys (`character`) optional
+    #'   vector of primary key column names.
     #' @param label (`character(1)`)
     #'   label to describe the dataset.
     #'
@@ -165,9 +190,9 @@ MAEFilteredDataset <- R6::R6Class( # nolint
       data <- self$get_dataset()
       experiment_names <- names(data)
 
-      div(
+      tags$div(
         tags$label("Add", tags$code(self$get_dataname()), "filter"),
-        br(),
+        tags$br(),
         HTML("&#9658;"),
         tags$label("Add subjects filter"),
         private$get_filter_states()[["subjects"]]$ui_add(id = ns("subjects")),

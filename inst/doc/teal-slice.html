@@ -457,24 +457,33 @@ developers</em> vignette.</p>
 <span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ui for the filter panel</span></span>
 <span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">column</span>(<span class="at">width =</span> <span class="dv">3</span>, datasets<span class="sc">$</span><span class="fu">ui_filter_panel</span>(<span class="st">&quot;filter_panel&quot;</span>))</span>
 <span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>  <span class="co"># this is the shiny server function for the filter panel and the datasets</span></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># object can now be used inside the application</span></span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  datasets<span class="sc">$</span><span class="fu">srv_filter_panel</span>(<span class="st">&quot;filter_panel&quot;</span>)</span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>  <span class="co"># get the filtered datasets and put them inside reactives for analysis</span></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>  iris_filtered_data <span class="ot">&lt;-</span> <span class="fu">reactive</span>(datasets<span class="sc">$</span><span class="fu">get_data</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">filtered =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>  mtcars_filtered_data <span class="ot">&lt;-</span> <span class="fu">reactive</span>(datasets<span class="sc">$</span><span class="fu">get_data</span>(<span class="at">dataname =</span> <span class="st">&quot;mtcars&quot;</span>, <span class="at">filtered =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>iris_table <span class="ot">&lt;-</span> <span class="fu">renderDataTable</span>(<span class="fu">iris_filtered_data</span>())</span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>mtcars_table <span class="ot">&lt;-</span> <span class="fu">renderDataTable</span>(<span class="fu">mtcars_filtered_data</span>())</span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">interactive</span>()) {</span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">shinyApp</span>(ui, server)</span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>## `shiny::dataTableOutput()` is deprecated as of shiny 1.8.1.
+## Please use `DT::DTOutput()` instead.
+## Since you have a suitable version of DT (&gt;= v0.32.1), shiny::dataTableOutput() will automatically use DT::DTOutput() under-the-hood.
+## If this happens to break your app, set `options(shiny.legacy.datatable = TRUE)` to get the legacy datatable implementation (or `FALSE` to squelch this message).
+## See &lt;https://rstudio.github.io/DT/shiny.html&gt; for more information.
+## `shiny::dataTableOutput()` is deprecated as of shiny 1.8.1.
+## Please use `DT::DTOutput()` instead.
+## Since you have a suitable version of DT (&gt;= v0.32.1), shiny::dataTableOutput() will automatically use DT::DTOutput() under-the-hood.
+## If this happens to break your app, set `options(shiny.legacy.datatable = TRUE)` to get the legacy datatable implementation (or `FALSE` to squelch this message).
+## See &lt;https://rstudio.github.io/DT/shiny.html&gt; for more information.</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># this is the shiny server function for the filter panel and the datasets</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># object can now be used inside the application</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  datasets<span class="sc">$</span><span class="fu">srv_filter_panel</span>(<span class="st">&quot;filter_panel&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># get the filtered datasets and put them inside reactives for analysis</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  iris_filtered_data <span class="ot">&lt;-</span> <span class="fu">reactive</span>(datasets<span class="sc">$</span><span class="fu">get_data</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">filtered =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  mtcars_filtered_data <span class="ot">&lt;-</span> <span class="fu">reactive</span>(datasets<span class="sc">$</span><span class="fu">get_data</span>(<span class="at">dataname =</span> <span class="st">&quot;mtcars&quot;</span>, <span class="at">filtered =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>iris_table <span class="ot">&lt;-</span> <span class="fu">renderDataTable</span>(<span class="fu">iris_filtered_data</span>())</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>mtcars_table <span class="ot">&lt;-</span> <span class="fu">renderDataTable</span>(<span class="fu">mtcars_filtered_data</span>())</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">interactive</span>()) {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">shinyApp</span>(ui, server)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 
 

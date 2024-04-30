@@ -1,3 +1,15 @@
+# teal.slice 0.5.1
+
+### Bug fixes
+* Fix how the filter panel handles NA values in a Date column.
+* Fix filtering of `ordered` column to return the right call.
+* Ensure choices are sorted for `factor` and `ordered` data types.
+
+### Miscellaneous
+
+* Added `teal_slice` and `teal_slices` to package index.
+* Implement mouse-over behavior for the filter card when it is selected.
+
 # teal.slice 0.5.0
 
 ### Enhancements
@@ -9,6 +21,10 @@
 * `TealData` object is no longer supported by `teal.slice`.
 * `set_filter_state` no longer accepts a nested list. Use `teal_slices()` and `teal_slice()` instead.
 * Renamed `FilteredDataset` subclass that handles `data.frame`s from `DefaultFilteredDataset` to `DataframeFilteredDataset`. Added new class `DefaultFilteredDataset` that will store any type of object. Filtering will is not supported.
+
+### Bug fixes
+
+* Performs an exact match when determining the default label of a dataset from attributes.
 
 ### Miscellaneous
 

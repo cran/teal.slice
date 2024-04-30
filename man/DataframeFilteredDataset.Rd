@@ -9,6 +9,32 @@ The \code{DataframeFilteredDataset} \code{R6} class
 
 The \code{DataframeFilteredDataset} \code{R6} class
 }
+\examples{
+# use non-exported function from teal.slice
+DataframeFilteredDataset <- getFromNamespace("DataframeFilteredDataset", "teal.slice")
+
+library(shiny)
+
+ds <- DataframeFilteredDataset$new(iris, "iris")
+ds$set_filter_state(
+  teal_slices(
+    teal_slice(dataname = "iris", varname = "Species", selected = "virginica"),
+    teal_slice(dataname = "iris", varname = "Petal.Length", selected = c(2.0, 5))
+  )
+)
+isolate(ds$get_filter_state())
+isolate(ds$get_call())
+
+## set_filter_state
+dataset <- DataframeFilteredDataset$new(iris, "iris")
+fs <- teal_slices(
+  teal_slice(dataname = "iris", varname = "Species", selected = "virginica"),
+  teal_slice(dataname = "iris", varname = "Petal.Length", selected = c(2.0, 5))
+)
+dataset$set_filter_state(state = fs)
+isolate(dataset$get_filter_state())
+
+}
 \keyword{internal}
 \section{Super class}{
 \code{\link[teal.slice:FilteredDataset]{teal.slice::FilteredDataset}} -> \code{DataframeFilteredDataset}
@@ -69,8 +95,8 @@ single \code{data.frame} for which filters are rendered.}
 \item{\code{dataname}}{(\code{character(1)})
 syntactically valid name given to the dataset.}
 
-\item{\code{keys}}{(\code{character})
-optional vector of primary key column names.}
+\item{\code{keys}}{(\code{character}) optional
+vector of primary key column names.}
 
 \item{\code{parent_name}}{(\code{character(1)})
 name of the parent dataset.}

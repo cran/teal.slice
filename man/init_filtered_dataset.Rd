@@ -11,7 +11,7 @@ init_filtered_dataset(
   parent_name = character(0),
   parent = reactive(dataset),
   join_keys = character(0),
-  label = attr(dataset, "label")
+  label = attr(dataset, "label", exact = TRUE)
 )
 }
 \arguments{
@@ -20,8 +20,8 @@ init_filtered_dataset(
 \item{dataname}{(\code{character(1)})
 syntactically valid name given to the dataset.}
 
-\item{keys}{(\code{character})
-optional vector of primary key column names.}
+\item{keys}{(\code{character}) optional
+vector of primary key column names.}
 
 \item{parent_name}{(\code{character(1)})
 name of the parent dataset.}

@@ -7,6 +7,22 @@
 #'
 #' @description `FilterState` subclass representing an empty variable.
 #'
+#' @examples
+#' # use non-exported function from teal.slice
+#' include_js_files <- getFromNamespace("include_js_files", "teal.slice")
+#' EmptyFilterState <- getFromNamespace("EmptyFilterState", "teal.slice")
+#'
+#' library(shiny)
+#'
+#' filter_state <- EmptyFilterState$new(
+#'   x = NA,
+#'   slice = teal_slice(varname = "x", dataname = "data"),
+#'   extract_type = character(0)
+#' )
+#' isolate(filter_state$get_call())
+#' filter_state$set_state(teal_slice(dataname = "data", varname = "x", keep_na = TRUE))
+#' isolate(filter_state$get_call())
+#'
 #' @keywords internal
 #'
 EmptyFilterState <- R6::R6Class( # nolint
@@ -112,7 +128,7 @@ EmptyFilterState <- R6::R6Class( # nolint
     ui_inputs = function(id) {
       ns <- NS(id)
       isolate({
-        div(
+        tags$div(
           tags$span("Variable contains missing values only"),
           private$keep_na_ui(ns("keep_na"))
         )

@@ -45,7 +45,7 @@ Initializes this \code{FilteredDataset} object.
   dataset,
   dataname,
   keys = character(0),
-  label = attr(dataset, "label")
+  label = attr(dataset, "label", exact = TRUE)
 )}\if{html}{\out{</div>}}
 }
 
@@ -57,8 +57,8 @@ Initializes this \code{FilteredDataset} object.
 \item{\code{dataname}}{(\code{character(1)})
 syntactically valid name given to the dataset.}
 
-\item{\code{keys}}{(\code{character})
-optional vector of primary key column names.}
+\item{\code{keys}}{(\code{character}) optional
+vector of primary key column names.}
 
 \item{\code{label}}{(\code{character(1)})
 label to describe the dataset.}

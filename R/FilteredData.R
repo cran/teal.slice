@@ -36,6 +36,59 @@
 #' 2. `dataname`: the name of one of the datasets in this `FilteredData` object
 #' 3. `varname`: one of the columns in a dataset
 #'
+#' @examples
+#' # use non-exported function from teal.slice
+#' FilteredData <- getFromNamespace("FilteredData", "teal.slice")
+#'
+#' library(shiny)
+#'
+#' datasets <- FilteredData$new(list(iris = iris, mtcars = mtcars))
+#'
+#' # get datanames
+#' datasets$datanames()
+#'
+#' datasets$set_filter_state(
+#'   teal_slices(teal_slice(dataname = "iris", varname = "Species", selected = "virginica"))
+#' )
+#' isolate(datasets$get_call("iris"))
+#'
+#' datasets$set_filter_state(
+#'   teal_slices(teal_slice(dataname = "mtcars", varname = "mpg", selected = c(15, 20)))
+#' )
+#'
+#' isolate(datasets$get_filter_state())
+#' isolate(datasets$get_call("iris"))
+#' isolate(datasets$get_call("mtcars"))
+#'
+#' @examplesIf requireNamespace("MultiAssayExperiment")
+#' ### set_filter_state
+#' library(shiny)
+#'
+#' data(miniACC, package = "MultiAssayExperiment")
+#' datasets <- FilteredData$new(list(iris = iris, mae = miniACC))
+#' fs <- teal_slices(
+#'   teal_slice(
+#'     dataname = "iris", varname = "Sepal.Length", selected = c(5.1, 6.4),
+#'     keep_na = TRUE, keep_inf = FALSE
+#'   ),
+#'   teal_slice(
+#'     dataname = "iris", varname = "Species", selected = c("setosa", "versicolor"),
+#'     keep_na = FALSE
+#'   ),
+#'   teal_slice(
+#'     dataname = "mae", varname = "years_to_birth", selected = c(30, 50),
+#'     keep_na = TRUE, keep_inf = FALSE
+#'   ),
+#'   teal_slice(dataname = "mae", varname = "vital_status", selected = "1", keep_na = FALSE),
+#'   teal_slice(dataname = "mae", varname = "gender", selected = "female", keep_na = TRUE),
+#'   teal_slice(
+#'     dataname = "mae", varname = "ARRAY_TYPE",
+#'     selected = "", keep_na = TRUE, experiment = "RPPAArray", arg = "subset"
+#'   )
+#' )
+#' datasets$set_filter_state(state = fs)
+#' isolate(datasets$get_filter_state())
+#'
 #' @keywords internal
 #'
 FilteredData <- R6::R6Class( # nolint
@@ -446,7 +499,7 @@ FilteredData <- R6::R6Class( # nolint
     #' @return `shiny.tag`
     ui_filter_panel = function(id) {
       ns <- NS(id)
-      div(
+      tags$div(
         id = ns(NULL), # used for hiding / showing
         include_css_files(pattern = "filter-panel"),
         self$ui_overview(ns("overview")),
@@ -499,7 +552,7 @@ FilteredData <- R6::R6Class( # nolint
     #' @return `shiny.tag`
     ui_active = function(id) {
       ns <- NS(id)
-      div(
+      tags$div(
         id = id, # not used, can be used to customize CSS behavior
         class = "well",
         tags$div(
@@ -521,7 +574,7 @@ FilteredData <- R6::R6Class( # nolint
             class = "remove_all pull-right"
           )
         ),
-        div(
+        tags$div(
           id = ns("filter_active_vars_contents"),
           tagList(
             lapply(
@@ -534,7 +587,7 @@ FilteredData <- R6::R6Class( # nolint
           )
         ),
         shinyjs::hidden(
-          div(
+          tags$div(
             id = ns("filters_active_count"),
             textOutput(ns("teal_filters_count"))
           )
@@ -618,7 +671,7 @@ FilteredData <- R6::R6Class( # nolint
     #' @return `shiny.tag`
     ui_add = function(id) {
       ns <- NS(id)
-      div(
+      tags$div(
         id = id, # not used, can be used to customize CSS behavior
         class = "well",
         tags$div(
@@ -638,14 +691,14 @@ FilteredData <- R6::R6Class( # nolint
             )
           )
         ),
-        div(
+        tags$div(
           id = ns("filter_add_vars_contents"),
           tagList(
             lapply(
               self$datanames(),
               function(dataname) {
                 fdataset <- private$get_filtered_dataset(dataname)
-                span(id = ns(dataname), fdataset$ui_add(ns(dataname)))
+                tags$span(id = ns(dataname), fdataset$ui_add(ns(dataname)))
               }
             )
           )
@@ -707,7 +760,7 @@ FilteredData <- R6::R6Class( # nolint
     #'
     ui_overview = function(id) {
       ns <- NS(id)
-      div(
+      tags$div(
         id = id, # not used, can be used to customize CSS behavior
         class = "well",
         tags$div(
@@ -727,9 +780,9 @@ FilteredData <- R6::R6Class( # nolint
             )
           )
         ),
-        div(
+        tags$div(
           id = ns("filters_overview_contents"),
-          div(
+          tags$div(
             class = "teal_active_summary_filter_panel",
             tableOutput(ns("table"))
           )
@@ -770,16 +823,19 @@ FilteredData <- R6::R6Class( # nolint
 
             datasets_df <- self$get_filter_overview(datanames = active_datanames())
 
+            attr(datasets_df$dataname, "label") <- "Data Name"
+
             if (!is.null(datasets_df$obs)) {
               # some datasets (MAE colData) doesn't return obs column
               datasets_df <- transform(
                 datasets_df,
-                Obs = ifelse(
+                obs_str_summary = ifelse(
                   !is.na(obs),
                   sprintf("%s/%s", obs_filtered, obs),
                   ""
                 )
               )
+              attr(datasets_df$obs_str_summary, "label") <- "Obs"
             }
 
 
@@ -787,14 +843,17 @@ FilteredData <- R6::R6Class( # nolint
               # some datasets (without keys) doesn't return subjects
               datasets_df <- transform(
                 datasets_df,
-                Subjects = ifelse(
+                subjects_summary = ifelse(
                   !is.na(subjects),
                   sprintf("%s/%s", subjects_filtered, subjects),
                   ""
                 )
               )
+              attr(datasets_df$subjects_summary, "label") <- "Subjects"
             }
-            datasets_df <- datasets_df[, colnames(datasets_df) %in% c("dataname", "Obs", "Subjects")]
+
+            all_names <- c("dataname", "obs_str_summary", "subjects_summary")
+            datasets_df <- datasets_df[, colnames(datasets_df) %in% all_names]
 
             body_html <- apply(
               datasets_df,
@@ -820,11 +879,15 @@ FilteredData <- R6::R6Class( # nolint
               }
             )
 
-            header_html <- tags$tr(
-              tagList(
-                lapply(colnames(datasets_df), tags$td)
-              )
+            header_labels <- vapply(
+              seq_along(datasets_df),
+              function(i) {
+                label <- attr(datasets_df[[i]], "label")
+                ifelse(!is.null(label), label, names(datasets_df)[[i]])
+              },
+              character(1)
             )
+            header_html <- tags$tr(tagList(lapply(header_labels, tags$td)))
 
             table_html <- tags$table(
               class = "table custom-table",
@@ -899,7 +962,7 @@ FilteredData <- R6::R6Class( # nolint
       ns <- NS(id)
 
       active_slices_id <- isolate(vapply(self$get_filter_state(), `[[`, character(1), "id"))
-      div(
+      tags$div(
         id = ns("available_menu"),
         shinyWidgets::dropMenu(
           actionLink(
@@ -909,7 +972,7 @@ FilteredData <- R6::R6Class( # nolint
             title = "Available filters",
             class = "remove pull-right"
           ),
-          div(
+          tags$div(
             class = "menu-content",
             shinycssloaders::withSpinner(
               uiOutput(ns("checkbox")),
@@ -990,7 +1053,7 @@ FilteredData <- R6::R6Class( # nolint
 
           htmltools::tagInsertChildren(
             checkbox,
-            br(),
+            tags$br(),
             if (length(non_interactive_choice_mock)) tags$strong("Fixed filters"),
             non_interactive_choice_mock,
             if (length(interactive_choice_mock)) tags$strong("Interactive filters"),
