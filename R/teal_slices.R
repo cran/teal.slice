@@ -81,7 +81,7 @@
 #'
 #' @seealso
 #' - [`teal_slice`] for creating constituent elements of `teal_slices`
-#' - [`teal::slices_store`] for robust utilities for saving and loading `teal_slices` in `JSON` format
+#' - `teal::slices_store` for robust utilities for saving and loading `teal_slices` in `JSON` format
 #' - [`is.teal_slices`], [`as.teal_slices`], [`as.list.teal_slices`], [`[.teal_slices`], [`c.teal_slices`]
 #' [`print.teal_slices`], [`format.teal_slices`]
 #'
@@ -235,6 +235,7 @@ format.teal_slices <- function(x, show_all = FALSE, trim_lines = TRUE, ...) {
 #'
 print.teal_slices <- function(x, ...) {
   cat(format(x, ...), "\n")
+  invisible(x)
 }
 
 

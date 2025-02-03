@@ -1,7 +1,7 @@
 ## ----echo=FALSE, out.width='60%'----------------------------------------------
 knitr::include_graphics("./images/teal-slice/filter-panel.png")
 
-## -----------------------------------------------------------------------------
+## ----warning=FALSE, message=FALSE---------------------------------------------
 library(shiny)
 library(teal.slice)
 

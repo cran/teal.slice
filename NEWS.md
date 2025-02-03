@@ -1,3 +1,22 @@
+# teal.slice 0.6.0
+
+### Enhancements
+
+* Reduced the space of the filter panel by not displaying the "add filters" UI in a separate panel.
+* The deprecated parameters `code` and `check` were removed from `init_filtered_data()`.
+
+### Bug fixes
+
+* Fix error while creating the filter choices when the data has a factor with a level containing an empty string ("").
+
+### Breaking changes
+
+* `ui_add` and `srv_add` no longer exist as adding new filters is a part of `ui_active` and `srv_active`.
+
+### Miscellaneous
+
+* `print.teal_slice()` and `print.teal_slices()` now return object invisibly.
+
 # teal.slice 0.5.1
 
 ### Bug fixes

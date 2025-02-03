@@ -480,7 +480,7 @@ RangeFilterState <- R6::R6Class( # nolint
       moduleServer(
         id = id,
         function(input, output, session) {
-          logger::log_trace("RangeFilterState$server initializing, id: { private$get_id() }")
+          logger::log_debug("RangeFilterState$server initializing, id: { private$get_id() }")
 
           # Capture manual input with debounce.
           selection_manual <- debounce(reactive(input$selection_manual), 200)
@@ -488,70 +488,76 @@ RangeFilterState <- R6::R6Class( # nolint
           # Prepare for histogram construction.
           plot_data <- c(private$plot_data, source = session$ns("histogram_plot"))
 
+          trigger_event_data <- reactiveVal(NULL)
+
           # Display histogram, adding a second trace that contains filtered data.
           output$plot <- plotly::renderPlotly({
             histogram <- do.call(plotly::plot_ly, plot_data)
             histogram <- do.call(plotly::layout, c(list(p = histogram), private$plot_layout()))
             histogram <- do.call(plotly::config, c(list(p = histogram), private$plot_config()))
             histogram <- do.call(plotly::add_histogram, c(list(p = histogram), private$plot_filtered()))
+            trigger_event_data(TRUE)
             histogram
           })
 
-          # Dragging shapes (lines) on plot updates selection.
-          private$observers$relayout <-
-            observeEvent(
-              ignoreNULL = FALSE,
-              ignoreInit = TRUE,
-              eventExpr = plotly::event_data("plotly_relayout", source = session$ns("histogram_plot")),
-              handlerExpr = {
-                logger::log_trace("RangeFilterState$server@1 selection changed, id: { private$get_id() }")
-                event <- plotly::event_data("plotly_relayout", source = session$ns("histogram_plot"))
-                if (any(grepl("shapes", names(event)))) {
-                  line_positions <- private$get_selected()
-                  if (any(grepl("shapes[0]", names(event), fixed = TRUE))) {
-                    line_positions[1] <- event[["shapes[0].x0"]]
-                  } else if (any(grepl("shapes[1]", names(event), fixed = TRUE))) {
-                    line_positions[2] <- event[["shapes[1].x0"]]
-                  }
-                  # If one line was dragged past the other, abort action and reset lines.
-                  if (line_positions[1] > line_positions[2]) {
-                    showNotification(
-                      "Numeric range start value must be less than end value.",
-                      type = "warning"
-                    )
-                    plotly::plotlyProxyInvoke(
-                      plotly::plotlyProxy("plot"),
-                      "relayout",
-                      shapes = private$get_shape_properties(private$get_selected())
-                    )
-                    return(NULL)
-                  }
+          relayout_data <- reactive({
+            req(trigger_event_data())
+            plotly::event_data("plotly_relayout", source = session$ns("histogram_plot"))
+          })
 
-                  private$set_selected(signif(line_positions, digits = 4L))
+          # Dragging shapes (lines) on plot updates selection.
+          private$session_bindings[[session$ns("relayout")]] <- observeEvent(
+            ignoreNULL = FALSE,
+            ignoreInit = TRUE,
+            eventExpr = relayout_data(),
+            handlerExpr = {
+              logger::log_debug("RangeFilterState$server@1 selection changed, id: { private$get_id() }")
+              event <- relayout_data()
+              if (any(grepl("shapes", names(event)))) {
+                line_positions <- private$get_selected()
+                if (any(grepl("shapes[0]", names(event), fixed = TRUE))) {
+                  line_positions[1] <- event[["shapes[0].x0"]]
+                } else if (any(grepl("shapes[1]", names(event), fixed = TRUE))) {
+                  line_positions[2] <- event[["shapes[1].x0"]]
                 }
+                # If one line was dragged past the other, abort action and reset lines.
+                if (line_positions[1] > line_positions[2]) {
+                  showNotification(
+                    "Numeric range start value must be less than end value.",
+                    type = "warning"
+                  )
+                  plotly::plotlyProxyInvoke(
+                    plotly::plotlyProxy("plot"),
+                    "relayout",
+                    shapes = private$get_shape_properties(private$get_selected())
+                  )
+                  return(NULL)
+                }
+
+                private$set_selected(signif(line_positions, digits = 4L))
               }
-            )
+            }
+          )
 
           # Change in selection updates shapes (lines) on plot and numeric input.
-          private$observers$selection_api <-
-            observeEvent(
-              ignoreNULL = FALSE,
-              ignoreInit = TRUE,
-              eventExpr = private$get_selected(),
-              handlerExpr = {
-                logger::log_trace("RangeFilterState$server@2 state changed, id: {private$get_id() }")
-                if (!isTRUE(all.equal(private$get_selected(), selection_manual()))) {
-                  shinyWidgets::updateNumericRangeInput(
-                    session = session,
-                    inputId = "selection_manual",
-                    value = private$get_selected()
-                  )
-                }
+          private$session_bindings[[session$ns("selection_api")]] <- observeEvent(
+            ignoreNULL = FALSE,
+            ignoreInit = TRUE,
+            eventExpr = private$get_selected(),
+            handlerExpr = {
+              if (!isTRUE(all.equal(private$get_selected(), selection_manual()))) {
+                logger::log_debug("RangeFilterState$server@2 state changed, id: {private$get_id() }")
+                shinyWidgets::updateNumericRangeInput(
+                  session = session,
+                  inputId = "selection_manual",
+                  value = private$get_selected()
+                )
               }
-            )
+            }
+          )
 
           # Manual input updates selection.
-          private$observers$selection_manual <- observeEvent(
+          private$session_bindings[[session$ns("selection_manual")]] <- observeEvent(
             ignoreNULL = FALSE,
             ignoreInit = TRUE,
             eventExpr = selection_manual(),
@@ -587,7 +593,7 @@ RangeFilterState <- R6::R6Class( # nolint
 
 
               if (!isTRUE(all.equal(selection, private$get_selected()))) {
-                logger::log_trace("RangeFilterState$server@3 manual selection changed, id: { private$get_id() }")
+                logger::log_debug("RangeFilterState$server@3 manual selection changed, id: { private$get_id() }")
                 private$set_selected(selection)
               }
             }
@@ -596,7 +602,6 @@ RangeFilterState <- R6::R6Class( # nolint
           private$keep_inf_srv("keep_inf")
           private$keep_na_srv("keep_na")
 
-          logger::log_trace("RangeFilterState$server initialized, id: { private$get_id() }")
           NULL
         }
       )
@@ -605,7 +610,7 @@ RangeFilterState <- R6::R6Class( # nolint
       moduleServer(
         id = id,
         function(input, output, session) {
-          logger::log_trace("RangeFilterState$server initializing, id: { private$get_id() }")
+          logger::log_debug("RangeFilterState$server initializing, id: { private$get_id() }")
 
           plot_config <- private$plot_config()
           plot_config$staticPlot <- TRUE
@@ -626,7 +631,6 @@ RangeFilterState <- R6::R6Class( # nolint
             )
           })
 
-          logger::log_trace("RangeFilterState$server initialized, id: { private$get_id() }")
           NULL
         }
       )
@@ -708,13 +712,13 @@ RangeFilterState <- R6::R6Class( # nolint
         # this observer is needed in the situation when private$teal_slice$keep_inf has been
         # changed directly by the api - then it's needed to rerender UI element
         # to show relevant values
-        private$observers$keep_inf_api <- observeEvent(
+        private$session_bindings[[session$ns("keep_inf_api")]] <- observeEvent(
           ignoreNULL = TRUE, # its not possible for range that NULL is selected
           ignoreInit = TRUE, # ignoreInit: should not matter because we set the UI with the desired initial state
           eventExpr = private$get_keep_inf(),
           handlerExpr = {
             if (!setequal(private$get_keep_inf(), input$value)) {
-              logger::log_trace("RangeFilterState$keep_inf_srv@1 changed reactive value, id: { private$get_id() }")
+              logger::log_debug("RangeFilterState$keep_inf_srv@1 changed reactive value, id: { private$get_id() }")
               updateCheckboxInput(
                 inputId = "value",
                 value = private$get_keep_inf()
@@ -723,12 +727,12 @@ RangeFilterState <- R6::R6Class( # nolint
           }
         )
 
-        private$observers$keep_inf <- observeEvent(
+        private$session_bindings[[session$ns("keep_inf")]] <- observeEvent(
           ignoreNULL = TRUE, # it's not possible for range that NULL is selected
           ignoreInit = TRUE, # ignoreInit: should not matter because we set the UI with the desired initial state
           eventExpr = input$value,
           handlerExpr = {
-            logger::log_trace("FilterState$keep_na_srv@2 changed input, id: { private$get_id() }")
+            logger::log_debug("FilterState$keep_na_srv@2 changed input, id: { private$get_id() }")
             keep_inf <- input$value
             private$set_keep_inf(keep_inf)
           }

@@ -155,6 +155,9 @@ ChoicesFilterState <- R6::R6Class( # nolint
           length(unique(x[!is.na(x)])) < getOption("teal.threshold_slider_vs_checkboxgroup"),
           combine = "or"
         )
+        if (is.factor(x)) {
+          x <- droplevels(x)
+        }
         super$initialize(
           x = x,
           x_reactive = x_reactive,
@@ -240,8 +243,8 @@ ChoicesFilterState <- R6::R6Class( # nolint
     # Checks validity of the choices, adjust if neccessary and sets the flag for the case where choices
     #  are limited by default from the start.
     set_choices = function(choices) {
-      ordered_counts <- .table(private$x)
-      possible_choices <- names(ordered_counts)
+      named_counts <- .table(private$x)
+      possible_choices <- names(named_counts)
       if (is.null(choices)) {
         choices <- possible_choices
       } else {
@@ -266,7 +269,9 @@ ChoicesFilterState <- R6::R6Class( # nolint
           choices <- possible_choices
         }
       }
-      private$set_choices_counts(unname(ordered_counts[choices]))
+      private$set_choices_counts(
+        pair_counts(choices, named_counts)
+      )
       private$set_is_choice_limited(possible_choices, choices)
       private$teal_slice$choices <- choices
       invisible(NULL)
@@ -331,12 +336,13 @@ ChoicesFilterState <- R6::R6Class( # nolint
     ui_inputs = function(id) {
       ns <- NS(id)
 
-      # we need to isolate UI to not rettrigger renderUI
+      # we need to isolate UI to not retrigger renderUI
       isolate({
         countsmax <- private$choices_counts
         countsnow <- if (!is.null(private$x_reactive())) {
-          unname(
-            .table(private$x_reactive())[private$get_choices()]
+          pair_counts(
+            private$get_choices(),
+            .table(private$x_reactive())
           )
         }
 
@@ -405,18 +411,18 @@ ChoicesFilterState <- R6::R6Class( # nolint
       moduleServer(
         id = id,
         function(input, output, session) {
-          logger::log_trace("ChoicesFilterState$server_inputs initializing, id: { private$get_id() }")
-
+          logger::log_debug("ChoicesFilterState$server_inputs initializing, id: { private$get_id() }")
           # 1. renderUI is used here as an observer which triggers only if output is visible
           #  and if the reactive changes - reactive triggers only if the output is visible.
           # 2. We want to trigger change of the labels only if reactive count changes (not underlying data)
           non_missing_values <- reactive(Filter(Negate(is.na), private$x_reactive()))
           output$trigger_visible <- renderUI({
-            logger::log_trace("ChoicesFilterState$server_inputs@1 updating count labels, id: { private$get_id() }")
+            logger::log_debug("ChoicesFilterState$server_inputs@1 updating count labels, id: { private$get_id() }")
 
             countsnow <- if (!is.null(private$x_reactive())) {
-              unname(
-                .table(non_missing_values())[private$get_choices()]
+              pair_counts(
+                private$get_choices(),
+                .table(non_missing_values())
               )
             }
 
@@ -447,13 +453,13 @@ ChoicesFilterState <- R6::R6Class( # nolint
             })
           })
 
-          if (private$is_checkboxgroup()) {
-            private$observers$selection <- observeEvent(
+          private$session_bindings[[session$ns("selection")]] <- if (private$is_checkboxgroup()) {
+            observeEvent(
               ignoreNULL = FALSE,
               ignoreInit = TRUE, # ignoreInit: should not matter because we set the UI with the desired initial state
               eventExpr = input$selection,
               handlerExpr = {
-                logger::log_trace("ChoicesFilterState$server_inputs@2 changed selection, id: { private$get_id() }")
+                logger::log_debug("ChoicesFilterState$server_inputs@2 changed selection, id: { private$get_id() }")
 
                 selection <- if (is.null(input$selection) && private$is_multiple()) {
                   character(0)
@@ -465,13 +471,13 @@ ChoicesFilterState <- R6::R6Class( # nolint
               }
             )
           } else {
-            private$observers$selection <- observeEvent(
+            observeEvent(
               ignoreNULL = FALSE,
               ignoreInit = TRUE, # ignoreInit: should not matter because we set the UI with the desired initial state
               eventExpr = input$selection_open, # observe click on a dropdown
               handlerExpr = {
                 if (!isTRUE(input$selection_open)) { # only when the dropdown got closed
-                  logger::log_trace("ChoicesFilterState$server_inputs@2 changed selection, id: { private$get_id() }")
+                  logger::log_debug("ChoicesFilterState$server_inputs@2 changed selection, id: { private$get_id() }")
 
                   selection <- if (is.null(input$selection) && private$is_multiple()) {
                     character(0)
@@ -497,17 +503,16 @@ ChoicesFilterState <- R6::R6Class( # nolint
             )
           }
 
-
           private$keep_na_srv("keep_na")
 
           # this observer is needed in the situation when teal_slice$selected has been
           # changed directly by the api - then it's needed to rerender UI element
           # to show relevant values
-          private$observers$selection_api <- observeEvent(private$get_selected(), {
+          private$session_bindings[[session$ns("selection_api")]] <- observeEvent(private$get_selected(), {
             # it's important to not retrigger when the input$selection is the same as reactive values
             # kept in the teal_slice$selected
             if (!setequal(input$selection, private$get_selected())) {
-              logger::log_trace("ChoicesFilterState$server@1 state changed, id: { private$get_id() }")
+              logger::log_debug("ChoicesFilterState$server@1 state changed, id: { private$get_id() }")
               if (private$is_checkboxgroup()) {
                 if (private$is_multiple()) {
                   updateCheckboxGroupInput(
@@ -529,7 +534,6 @@ ChoicesFilterState <- R6::R6Class( # nolint
             }
           })
 
-          logger::log_trace("ChoicesFilterState$server_inputs initialized, id: { private$get_id() }")
           NULL
         }
       )
@@ -538,12 +542,13 @@ ChoicesFilterState <- R6::R6Class( # nolint
       moduleServer(
         id = id,
         function(input, output, session) {
-          logger::log_trace("ChoicesFilterState$server_inputs_fixed initializing, id: { private$get_id() }")
+          logger::log_debug("ChoicesFilterState$server_inputs_fixed initializing, id: { private$get_id() }")
 
           output$selection <- renderUI({
             countsnow <- if (!is.null(private$x_reactive())) {
-              unname(
-                .table(private$x_reactive())[private$get_choices()]
+              pair_counts(
+                private$get_choices(),
+                .table(private$x_reactive())
               )
             }
             countsmax <- private$choices_counts
@@ -557,7 +562,6 @@ ChoicesFilterState <- R6::R6Class( # nolint
             )
           })
 
-          logger::log_trace("ChoicesFilterState$server_inputs_fixed initialized, id: { private$get_id() }")
           NULL
         }
       )
@@ -602,11 +606,17 @@ ChoicesFilterState <- R6::R6Class( # nolint
 #'
 #' @keywords internal
 .table <- function(x) {
-  table(
+  tbl <- table(
     if (is.factor(x)) {
       x
     } else {
       as.character(x)
     }
+  )
+  # tbl returns an array with dimnames instead of a simple vector
+  # we need to convert it to a vector so the object is simpler to handle
+  stats::setNames(
+    as.vector(tbl),
+    names(tbl)
   )
 }
