@@ -1,8 +1,8 @@
 Type: Package
 Package: teal.slice
 Title: Filter Module for 'teal' Applications
-Version: 0.6.0
-Date: 2025-01-31
+Version: 0.7.0
+Date: 2025-08-19
 Authors@R: c(
     person("Dawid", "Kaledkowski", , "dawid.kaledkowski@roche.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-9533-457X")),
@@ -32,23 +32,24 @@ URL: https://insightsengineering.github.io/teal.slice/,
         https://github.com/insightsengineering/teal.slice/
 BugReports: https://github.com/insightsengineering/teal.slice/issues
 Depends: R (>= 4.0)
-Imports: bslib (>= 0.4.0), checkmate (>= 2.1.0), dplyr (>= 1.0.5),
-        grDevices, htmltools (>= 0.5.4), jsonlite, lifecycle (>=
-        0.2.0), logger (>= 0.3.0), methods, plotly (>= 4.9.2.2), R6 (>=
-        2.2.0), rlang (>= 1.0.0), shiny (>= 1.6.0), shinycssloaders (>=
-        1.0.0), shinyjs, shinyWidgets (>= 0.6.2), teal.data (>= 0.7.0),
-        teal.logger (>= 0.3.1), teal.widgets (>= 0.4.3), utils
-Suggests: knitr (>= 1.42), MultiAssayExperiment, rmarkdown (>= 2.23),
+Imports: bsicons (>= 0.1.2), bslib (>= 0.8.0), checkmate (>= 2.1.0),
+        dplyr (>= 1.0.5), grDevices, htmltools (>= 0.5.4), jsonlite (>=
+        2.0.0), logger (>= 0.4.0), methods, plotly (>= 4.10.4), R6 (>=
+        2.2.0), rlang (>= 1.0.0), shiny (>= 1.8.1), shinycssloaders (>=
+        1.0.0), shinyjs (>= 2.1.0), shinyWidgets (>= 0.6.2), teal.data
+        (>= 0.8.0), teal.logger (>= 0.4.0), teal.widgets (>= 0.5.0),
+        utils
+Suggests: DT (>= 0.13), knitr (>= 1.42), MultiAssayExperiment,
+        rmarkdown (>= 2.23), shinytest2 (>= 0.4.1),
         SummarizedExperiment, testthat (>= 3.2.2), withr (>= 3.0.2)
 VignetteBuilder: knitr, rmarkdown
-RdMacros: lifecycle
 Config/Needs/verdepcheck: rstudio/shiny, rstudio/bslib, mllg/checkmate,
         tidyverse/dplyr, rstudio/htmltools, jeroen/jsonlite,
-        r-lib/lifecycle, daroczig/logger, plotly/plotly, r-lib/R6,
+        daroczig/logger, plotly/plotly, r-lib/R6,
         daattali/shinycssloaders, daattali/shinyjs,
         dreamRs/shinyWidgets, insightsengineering/teal.data,
         insightsengineering/teal.logger,
-        insightsengineering/teal.widgets, yihui/knitr,
+        insightsengineering/teal.widgets, rstudio/DT, yihui/knitr,
         bioc::MultiAssayExperiment, bioc::SummarizedExperiment,
         rstudio/rmarkdown, r-lib/testthat, r-lib/withr,
         bioc::matrixStats
@@ -57,11 +58,13 @@ Encoding: UTF-8
 Language: en-US
 RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2025-02-03 22:48:04 UTC; unardid
-Author: Dawid Kaledkowski [aut, cre] (<https://orcid.org/0000-0001-9533-457X>),
+Packaged: 2025-08-19 19:51:46 UTC; unardid
+Author: Dawid Kaledkowski [aut, cre] (ORCID:
+    <https://orcid.org/0000-0001-9533-457X>),
   Pawel Rucki [aut],
-  Aleksander Chlebowski [aut] (<https://orcid.org/0000-0001-5018-6294>),
-  Andre Verissimo [aut] (<https://orcid.org/0000-0002-2212-339X>),
+  Aleksander Chlebowski [aut] (ORCID:
+    <https://orcid.org/0000-0001-5018-6294>),
+  Andre Verissimo [aut] (ORCID: <https://orcid.org/0000-0002-2212-339X>),
   Kartikeya Kirar [aut],
   Marcin Kosinski [aut],
   Chendi Liao [rev],
@@ -75,4 +78,4 @@ Author: Dawid Kaledkowski [aut, cre] (<https://orcid.org/0000-0001-9533-457X>),
   F. Hoffmann-La Roche AG [cph, fnd]
 Maintainer: Dawid Kaledkowski <dawid.kaledkowski@roche.com>
 Repository: CRAN
-Date/Publication: 2025-02-03 23:40:02 UTC
+Date/Publication: 2025-08-20 05:00:15 UTC

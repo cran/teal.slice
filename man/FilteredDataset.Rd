@@ -16,6 +16,7 @@ components of the dataset.
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-FilteredDataset-new}{\code{FilteredDataset$new()}}
+\item \href{#method-FilteredDataset-destroy}{\code{FilteredDataset$destroy()}}
 \item \href{#method-FilteredDataset-format}{\code{FilteredDataset$format()}}
 \item \href{#method-FilteredDataset-print}{\code{FilteredDataset$print()}}
 \item \href{#method-FilteredDataset-clear_filter_states}{\code{FilteredDataset$clear_filter_states()}}
@@ -31,7 +32,6 @@ components of the dataset.
 \item \href{#method-FilteredDataset-srv_active}{\code{FilteredDataset$srv_active()}}
 \item \href{#method-FilteredDataset-ui_add}{\code{FilteredDataset$ui_add()}}
 \item \href{#method-FilteredDataset-srv_add}{\code{FilteredDataset$srv_add()}}
-\item \href{#method-FilteredDataset-finalize}{\code{FilteredDataset$finalize()}}
 \item \href{#method-FilteredDataset-clone}{\code{FilteredDataset$clone()}}
 }
 }
@@ -68,6 +68,16 @@ label to describe the dataset.}
 \subsection{Returns}{
 Object of class \code{FilteredDataset}, invisibly.
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FilteredDataset-destroy"></a>}}
+\if{latex}{\out{\hypertarget{method-FilteredDataset-destroy}{}}}
+\subsection{Method \code{destroy()}}{
+Destroys a \code{FilteredDataset} object.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FilteredDataset$destroy()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FilteredDataset-format"></a>}}
@@ -267,7 +277,7 @@ Character string.
 \subsection{Method \code{ui_active()}}{
 \code{shiny} module containing active filters for a dataset, along with a title and a remove button.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{FilteredDataset$ui_active(id, allow_add = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{FilteredDataset$ui_active(id)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -275,9 +285,6 @@ Character string.
 \describe{
 \item{\code{id}}{(\code{character(1)})
 \code{shiny} module instance id.}
-
-\item{\code{allow_add}}{(\code{logical(1)})
-logical flag specifying whether the user will be able to add new filters}
 }
 \if{html}{\out{</div>}}
 }
@@ -349,23 +356,6 @@ contains one \code{FilterStates} object for \code{colData} and one for each expe
 }
 \subsection{Returns}{
 \code{NULL}.
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-FilteredDataset-finalize"></a>}}
-\if{latex}{\out{\hypertarget{method-FilteredDataset-finalize}{}}}
-\subsection{Method \code{finalize()}}{
-Object and dependencies cleanup.
-\itemize{
-\item Destroy inputs and observers stored in \code{private$session_bindings}
-\item Finalize \code{FilterStates} stored in \code{private$filter_states}
-}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{FilteredDataset$finalize()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-\code{NULL}, invisibly.
 }
 }
 \if{html}{\out{<hr>}}

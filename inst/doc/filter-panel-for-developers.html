@@ -584,86 +584,85 @@ module will be displayed to allow the user to add new filters.</li>
 <p>All the instructions herein can be utilized to build a
 <code>shiny</code> app.</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">library</span>(shiny)</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co"># initializing FilteredData</span></span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>datasets <span class="ot">&lt;-</span> <span class="fu">init_filtered_data</span>(<span class="fu">list</span>(<span class="at">iris =</span> iris, <span class="at">mtcars =</span> mtcars))</span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co"># setting initial filters</span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="fu">set_filter_state</span>(</span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>  <span class="at">datasets =</span> datasets,</span>
-<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  <span class="at">filter =</span> <span class="fu">teal_slices</span>(</span>
-<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>    <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;Species&quot;</span>, <span class="at">selected =</span> <span class="st">&quot;virginica&quot;</span>, <span class="at">keep_na =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>    <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;mtcars&quot;</span>, <span class="at">id =</span> <span class="st">&quot;4 cyl&quot;</span>, <span class="at">title =</span> <span class="st">&quot;4 Cylinders&quot;</span>, <span class="at">expr =</span> <span class="st">&quot;cyl == 4&quot;</span>),</span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>    <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;mtcars&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;mpg&quot;</span>, <span class="at">selected =</span> <span class="fu">c</span>(<span class="fl">20.0</span>, <span class="fl">25.0</span>), <span class="at">keep_na =</span> <span class="cn">FALSE</span>, <span class="at">keep_inf =</span> <span class="cn">FALSE</span>),</span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>    <span class="at">include_varnames =</span> <span class="fu">list</span>(<span class="at">iris =</span> <span class="fu">c</span>(<span class="st">&quot;Species&quot;</span>, <span class="st">&quot;Sepal.Length&quot;</span>)),</span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>    <span class="at">exclude_varnames =</span> <span class="fu">list</span>(<span class="at">mtcars =</span> <span class="st">&quot;cyl&quot;</span>),</span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>    <span class="at">count_type =</span> <span class="st">&quot;all&quot;</span>,</span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>    <span class="at">allow_add =</span> <span class="cn">TRUE</span></span>
-<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>  )</span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>)</span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(</span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>  shinyjs<span class="sc">::</span><span class="fu">useShinyjs</span>(),</span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>  <span class="fu">fluidRow</span>(</span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a>    <span class="fu">column</span>(</span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>      <span class="at">width =</span> <span class="dv">9</span>,</span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>      <span class="at">id =</span> <span class="st">&quot;teal_primary_col&quot;</span>,</span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a>      <span class="fu">tagList</span>(</span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a>        <span class="fu">actionButton</span>(<span class="st">&quot;add_species_filter&quot;</span>, <span class="st">&quot;Set iris$Species filter&quot;</span>),</span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a>        <span class="fu">actionButton</span>(<span class="st">&quot;remove_species_filter&quot;</span>, <span class="st">&quot;Remove iris$Species filter&quot;</span>),</span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a>        <span class="fu">actionButton</span>(<span class="st">&quot;remove_all_filters&quot;</span>, <span class="st">&quot;Remove all filters&quot;</span>),</span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a>        <span class="fu">verbatimTextOutput</span>(<span class="st">&quot;rcode&quot;</span>),</span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a>        <span class="fu">verbatimTextOutput</span>(<span class="st">&quot;filter_state&quot;</span>)</span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a>      )</span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a>    ),</span>
-<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a>    <span class="fu">column</span>(</span>
-<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a>      <span class="at">width =</span> <span class="dv">3</span>,</span>
-<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a>      <span class="at">id =</span> <span class="st">&quot;teal_secondary_col&quot;</span>,</span>
-<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a>      datasets<span class="sc">$</span><span class="fu">ui_filter_panel</span>(<span class="st">&quot;filter_panel&quot;</span>)</span>
-<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a>    )</span>
-<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a>  )</span>
-<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a>)</span>
-<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a></span>
-<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
-<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a>  <span class="co"># calling filter panel module</span></span>
-<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a>  datasets<span class="sc">$</span><span class="fu">srv_filter_panel</span>(<span class="st">&quot;filter_panel&quot;</span>)</span>
-<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a></span>
-<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a>  <span class="co"># displaying actual filter states</span></span>
-<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a>  output<span class="sc">$</span>filter_state <span class="ot">&lt;-</span> <span class="fu">renderPrint</span>(<span class="fu">print</span>(<span class="fu">get_filter_state</span>(datasets), <span class="at">trim =</span> <span class="cn">FALSE</span>))</span>
-<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a></span>
-<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a>  <span class="co"># displaying reproducible filter call</span></span>
-<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a>  output<span class="sc">$</span>rcode <span class="ot">&lt;-</span> <span class="fu">renderText</span>(</span>
-<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a>    <span class="fu">paste</span>(</span>
-<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a>      <span class="fu">sapply</span>(<span class="fu">c</span>(<span class="st">&quot;iris&quot;</span>, <span class="st">&quot;mtcars&quot;</span>), datasets<span class="sc">$</span>get_call),</span>
-<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a>      <span class="at">collapse =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span></span>
-<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a>    )</span>
-<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a>  )</span>
-<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a></span>
-<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a>  <span class="co"># programmatic interaction with FilteredData</span></span>
-<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a>  <span class="fu">observeEvent</span>(input<span class="sc">$</span>add_species_filter, {</span>
-<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a>    <span class="fu">set_filter_state</span>(</span>
-<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a>      datasets,</span>
-<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a>      <span class="fu">teal_slices</span>(</span>
-<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a>        <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;Species&quot;</span>, <span class="at">selected =</span> <span class="fu">c</span>(<span class="st">&quot;setosa&quot;</span>, <span class="st">&quot;versicolor&quot;</span>))</span>
-<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a>      )</span>
-<span id="cb9-64"><a href="#cb9-64" tabindex="-1"></a>    )</span>
-<span id="cb9-65"><a href="#cb9-65" tabindex="-1"></a>  })</span>
-<span id="cb9-66"><a href="#cb9-66" tabindex="-1"></a></span>
-<span id="cb9-67"><a href="#cb9-67" tabindex="-1"></a>  <span class="co"># programmatic removal of the FilterState</span></span>
-<span id="cb9-68"><a href="#cb9-68" tabindex="-1"></a>  <span class="fu">observeEvent</span>(input<span class="sc">$</span>remove_species_filter, {</span>
-<span id="cb9-69"><a href="#cb9-69" tabindex="-1"></a>    <span class="fu">remove_filter_state</span>(</span>
-<span id="cb9-70"><a href="#cb9-70" tabindex="-1"></a>      datasets,</span>
-<span id="cb9-71"><a href="#cb9-71" tabindex="-1"></a>      <span class="fu">teal_slices</span>(</span>
-<span id="cb9-72"><a href="#cb9-72" tabindex="-1"></a>        <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;Species&quot;</span>)</span>
-<span id="cb9-73"><a href="#cb9-73" tabindex="-1"></a>      )</span>
-<span id="cb9-74"><a href="#cb9-74" tabindex="-1"></a>    )</span>
-<span id="cb9-75"><a href="#cb9-75" tabindex="-1"></a>  })</span>
-<span id="cb9-76"><a href="#cb9-76" tabindex="-1"></a>  <span class="fu">observeEvent</span>(input<span class="sc">$</span>remove_all_filters, <span class="fu">clear_filter_states</span>(datasets))</span>
-<span id="cb9-77"><a href="#cb9-77" tabindex="-1"></a>}</span>
-<span id="cb9-78"><a href="#cb9-78" tabindex="-1"></a></span>
-<span id="cb9-79"><a href="#cb9-79" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">interactive</span>()) {</span>
-<span id="cb9-80"><a href="#cb9-80" tabindex="-1"></a>  <span class="fu">shinyApp</span>(ui, server)</span>
-<span id="cb9-81"><a href="#cb9-81" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">library</span>(bslib)</span></code></pre></div>
+<pre><code>## 
+## Attaching package: &#39;bslib&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:utils&#39;:
+## 
+##     page</code></pre>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># initializing FilteredData</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>datasets <span class="ot">&lt;-</span> <span class="fu">init_filtered_data</span>(<span class="fu">list</span>(<span class="at">iris =</span> iris, <span class="at">mtcars =</span> mtcars))</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co"># setting initial filters</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="fu">set_filter_state</span>(</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="at">datasets =</span> datasets,</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">filter =</span> <span class="fu">teal_slices</span>(</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>    <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;Species&quot;</span>, <span class="at">selected =</span> <span class="st">&quot;virginica&quot;</span>, <span class="at">keep_na =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>    <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;mtcars&quot;</span>, <span class="at">id =</span> <span class="st">&quot;4 cyl&quot;</span>, <span class="at">title =</span> <span class="st">&quot;4 Cylinders&quot;</span>, <span class="at">expr =</span> <span class="st">&quot;cyl == 4&quot;</span>),</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>    <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;mtcars&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;mpg&quot;</span>, <span class="at">selected =</span> <span class="fu">c</span>(<span class="fl">20.0</span>, <span class="fl">25.0</span>), <span class="at">keep_na =</span> <span class="cn">FALSE</span>, <span class="at">keep_inf =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>    <span class="at">include_varnames =</span> <span class="fu">list</span>(<span class="at">iris =</span> <span class="fu">c</span>(<span class="st">&quot;Species&quot;</span>, <span class="st">&quot;Sepal.Length&quot;</span>)),</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>    <span class="at">exclude_varnames =</span> <span class="fu">list</span>(<span class="at">mtcars =</span> <span class="st">&quot;cyl&quot;</span>),</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>    <span class="at">count_type =</span> <span class="st">&quot;all&quot;</span>,</span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>    <span class="at">allow_add =</span> <span class="cn">TRUE</span></span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>  )</span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a>)</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a>ui <span class="ot">&lt;-</span> bslib<span class="sc">::</span><span class="fu">page_fluid</span>(</span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a>  bslib<span class="sc">::</span><span class="fu">layout_column_wrap</span>(</span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a>    <span class="at">style =</span> htmltools<span class="sc">::</span><span class="fu">css</span>(<span class="at">grid_template_columns =</span> <span class="st">&quot;2fr 1fr&quot;</span>),</span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a>    tags<span class="sc">$</span><span class="fu">div</span>(</span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a>      tags<span class="sc">$</span><span class="fu">div</span>(</span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a>        <span class="fu">actionButton</span>(<span class="st">&quot;add_species_filter&quot;</span>, <span class="st">&quot;Set iris$Species filter&quot;</span>),</span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a>        <span class="fu">actionButton</span>(<span class="st">&quot;remove_species_filter&quot;</span>, <span class="st">&quot;Remove iris$Species filter&quot;</span>),</span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a>        <span class="fu">actionButton</span>(<span class="st">&quot;remove_all_filters&quot;</span>, <span class="st">&quot;Remove all filters&quot;</span>)</span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a>      ),</span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a>      <span class="fu">verbatimTextOutput</span>(<span class="st">&quot;rcode&quot;</span>),</span>
+<span id="cb12-28"><a href="#cb12-28" tabindex="-1"></a>      <span class="fu">verbatimTextOutput</span>(<span class="st">&quot;filter_state&quot;</span>)</span>
+<span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a>    ),</span>
+<span id="cb12-30"><a href="#cb12-30" tabindex="-1"></a>    datasets<span class="sc">$</span><span class="fu">ui_filter_panel</span>(<span class="st">&quot;filter_panel&quot;</span>)</span>
+<span id="cb12-31"><a href="#cb12-31" tabindex="-1"></a>  )</span>
+<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a>)</span>
+<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a></span>
+<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output, session) {</span>
+<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a>  <span class="co"># calling filter panel module</span></span>
+<span id="cb12-36"><a href="#cb12-36" tabindex="-1"></a>  datasets<span class="sc">$</span><span class="fu">srv_filter_panel</span>(<span class="st">&quot;filter_panel&quot;</span>)</span>
+<span id="cb12-37"><a href="#cb12-37" tabindex="-1"></a></span>
+<span id="cb12-38"><a href="#cb12-38" tabindex="-1"></a>  <span class="co"># displaying actual filter states</span></span>
+<span id="cb12-39"><a href="#cb12-39" tabindex="-1"></a>  output<span class="sc">$</span>filter_state <span class="ot">&lt;-</span> <span class="fu">renderPrint</span>(<span class="fu">print</span>(<span class="fu">get_filter_state</span>(datasets), <span class="at">trim =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb12-40"><a href="#cb12-40" tabindex="-1"></a></span>
+<span id="cb12-41"><a href="#cb12-41" tabindex="-1"></a>  <span class="co"># displaying reproducible filter call</span></span>
+<span id="cb12-42"><a href="#cb12-42" tabindex="-1"></a>  output<span class="sc">$</span>rcode <span class="ot">&lt;-</span> <span class="fu">renderText</span>(</span>
+<span id="cb12-43"><a href="#cb12-43" tabindex="-1"></a>    <span class="fu">paste</span>(</span>
+<span id="cb12-44"><a href="#cb12-44" tabindex="-1"></a>      <span class="fu">sapply</span>(<span class="fu">c</span>(<span class="st">&quot;iris&quot;</span>, <span class="st">&quot;mtcars&quot;</span>), datasets<span class="sc">$</span>get_call),</span>
+<span id="cb12-45"><a href="#cb12-45" tabindex="-1"></a>      <span class="at">collapse =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span></span>
+<span id="cb12-46"><a href="#cb12-46" tabindex="-1"></a>    )</span>
+<span id="cb12-47"><a href="#cb12-47" tabindex="-1"></a>  )</span>
+<span id="cb12-48"><a href="#cb12-48" tabindex="-1"></a></span>
+<span id="cb12-49"><a href="#cb12-49" tabindex="-1"></a>  <span class="co"># programmatic interaction with FilteredData</span></span>
+<span id="cb12-50"><a href="#cb12-50" tabindex="-1"></a>  <span class="fu">observeEvent</span>(input<span class="sc">$</span>add_species_filter, {</span>
+<span id="cb12-51"><a href="#cb12-51" tabindex="-1"></a>    <span class="fu">set_filter_state</span>(</span>
+<span id="cb12-52"><a href="#cb12-52" tabindex="-1"></a>      datasets,</span>
+<span id="cb12-53"><a href="#cb12-53" tabindex="-1"></a>      <span class="fu">teal_slices</span>(</span>
+<span id="cb12-54"><a href="#cb12-54" tabindex="-1"></a>        <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;Species&quot;</span>, <span class="at">selected =</span> <span class="fu">c</span>(<span class="st">&quot;setosa&quot;</span>, <span class="st">&quot;versicolor&quot;</span>))</span>
+<span id="cb12-55"><a href="#cb12-55" tabindex="-1"></a>      )</span>
+<span id="cb12-56"><a href="#cb12-56" tabindex="-1"></a>    )</span>
+<span id="cb12-57"><a href="#cb12-57" tabindex="-1"></a>  })</span>
+<span id="cb12-58"><a href="#cb12-58" tabindex="-1"></a></span>
+<span id="cb12-59"><a href="#cb12-59" tabindex="-1"></a>  <span class="co"># programmatic removal of the FilterState</span></span>
+<span id="cb12-60"><a href="#cb12-60" tabindex="-1"></a>  <span class="fu">observeEvent</span>(input<span class="sc">$</span>remove_species_filter, {</span>
+<span id="cb12-61"><a href="#cb12-61" tabindex="-1"></a>    <span class="fu">remove_filter_state</span>(</span>
+<span id="cb12-62"><a href="#cb12-62" tabindex="-1"></a>      datasets,</span>
+<span id="cb12-63"><a href="#cb12-63" tabindex="-1"></a>      <span class="fu">teal_slices</span>(</span>
+<span id="cb12-64"><a href="#cb12-64" tabindex="-1"></a>        <span class="fu">teal_slice</span>(<span class="at">dataname =</span> <span class="st">&quot;iris&quot;</span>, <span class="at">varname =</span> <span class="st">&quot;Species&quot;</span>)</span>
+<span id="cb12-65"><a href="#cb12-65" tabindex="-1"></a>      )</span>
+<span id="cb12-66"><a href="#cb12-66" tabindex="-1"></a>    )</span>
+<span id="cb12-67"><a href="#cb12-67" tabindex="-1"></a>  })</span>
+<span id="cb12-68"><a href="#cb12-68" tabindex="-1"></a>  <span class="fu">observeEvent</span>(input<span class="sc">$</span>remove_all_filters, <span class="fu">clear_filter_states</span>(datasets))</span>
+<span id="cb12-69"><a href="#cb12-69" tabindex="-1"></a>}</span>
+<span id="cb12-70"><a href="#cb12-70" tabindex="-1"></a></span>
+<span id="cb12-71"><a href="#cb12-71" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">interactive</span>()) {</span>
+<span id="cb12-72"><a href="#cb12-72" tabindex="-1"></a>  <span class="fu">shinyApp</span>(ui, server)</span>
+<span id="cb12-73"><a href="#cb12-73" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 
 

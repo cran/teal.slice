@@ -34,6 +34,7 @@ FilteredDataset <- R6::R6Class( # nolint
       logger::log_debug("Instantiating { class(self)[1] }, dataname: { dataname }")
       checkmate::assert_character(keys, any.missing = FALSE)
       checkmate::assert_character(label, null.ok = TRUE)
+      private$allow_add <- reactiveVal(TRUE)
       private$dataset <- dataset
       private$dataname <- dataname
       private$keys <- keys
@@ -45,7 +46,7 @@ FilteredDataset <- R6::R6Class( # nolint
         if (length(sid)) {
           logger::log_debug("filtering data dataname: { dataname }, sid: { sid }")
         } else {
-          logger::log_debug("filtering data dataname: { private$dataname }")
+          logger::log_debug("filtering data dataname: { dataname }")
         }
         env <- new.env(parent = parent.env(globalenv()))
         env[[dataname]] <- private$dataset
@@ -57,6 +58,10 @@ FilteredDataset <- R6::R6Class( # nolint
       private$data_filtered <- reactive(private$data_filtered_fun())
       invisible(self)
     },
+
+    #' @description Destroys a `FilteredDataset` object.
+    destroy = function() private$finalize(),
+
 
     #' @description
     #' Returns a formatted string representing this `FilteredDataset` object.
@@ -91,12 +96,11 @@ FilteredDataset <- R6::R6Class( # nolint
     #'
     #' @return `NULL`.
     clear_filter_states = function(force = FALSE) {
-      logger::log_debug("Removing filters from FilteredDataset: { deparse1(self$get_dataname()) }")
+      logger::log_debug("Removing filters from FilteredDataset: { private$dataname }")
       lapply(
         private$get_filter_states(),
         function(filter_states) filter_states$clear_filter_states(force)
       )
-      logger::log_debug("Removed filters from FilteredDataset: { deparse1(self$get_dataname()) }")
       NULL
     },
 
@@ -144,7 +148,13 @@ FilteredDataset <- R6::R6Class( # nolint
     #' @return Virtual method, returns nothing and raises error.
     #'
     set_filter_state = function(state) {
-      stop("set_filter_state is an abstract class method.")
+      isolate({
+        allow_add <- attr(state, "allow_add")
+        if (!is.null(allow_add) && !identical(allow_add, private$allow_add())) {
+          private$allow_add(allow_add)
+        }
+        invisible(self)
+      })
     },
 
     #' @description
@@ -198,84 +208,12 @@ FilteredDataset <- R6::R6Class( # nolint
     #' `shiny` module containing active filters for a dataset, along with a title and a remove button.
     #' @param id (`character(1)`)
     #'   `shiny` module instance id.
-    #' @param allow_add (`logical(1)`)
-    #'   logical flag specifying whether the user will be able to add new filters
     #'
     #' @return `shiny.tag`
-    ui_active = function(id, allow_add = TRUE) {
-      dataname <- self$get_dataname()
-      checkmate::assert_string(dataname)
-
+    ui_active = function(id) {
       ns <- NS(id)
-      if_multiple_filter_states <- length(private$get_filter_states()) > 1
-      tags$span(
-        id = id,
-        include_css_files("filter-panel"),
-        include_js_files(pattern = "icons"),
-        tags$div(
-          id = ns("whole_ui"), # to hide it entirely
-          fluidRow(
-            style = "padding: 0px 15px 0px 15px;",
-            tags$div(
-              style = "display: flex; align-items: center; justify-content: space-between;",
-              tags$div(
-                style = "display: flex;",
-                tags$span(dataname, class = "filter_panel_dataname"),
-                if (allow_add) {
-                  tags$a(
-                    class = "filter-icon add-filter",
-                    tags$i(
-                      id = ns("add_filter_icon"),
-                      class = "fa fa-plus",
-                      title = "fold/expand transform panel",
-                      onclick = sprintf(
-                        "togglePanelItems(this, '%s', 'fa-plus', 'fa-minus');",
-                        ns("add_panel")
-                      )
-                    )
-                  )
-                }
-              ),
-              tags$div(
-                style = "min-width: 40px; z-index: 1; display: flex; justify-content: flex-end;",
-                uiOutput(ns("collapse_ui")),
-                uiOutput(ns("remove_filters_ui"))
-              )
-            ),
-            if (allow_add) {
-              tags$div(
-                id = ns("add_panel"),
-                class = "add-panel",
-                style = "display: none;",
-                self$ui_add(ns(private$dataname))
-              )
-            }
-          ),
-          tags$div(
-            id = ns("filter_count_ui"),
-            style = "display: none;",
-            tagList(
-              textOutput(ns("filter_count"))
-            )
-          ),
-          tags$div(
-            # id needed to insert and remove UI to filter single variable as needed
-            # it is currently also used by the above module to entirely hide this panel
-            id = ns("filters"),
-            class = "parent-hideable-list-group",
-            tagList(
-              lapply(
-                names(private$get_filter_states()),
-                function(x) {
-                  tagList(private$get_filter_states()[[x]]$ui_active(id = ns(x)))
-                }
-              )
-            )
-          )
-        )
-      )
+      uiOutput(ns("container"))
     },
-
     #' @description
     #' Server module for a dataset active filters.
     #'
@@ -288,10 +226,122 @@ FilteredDataset <- R6::R6Class( # nolint
         function(input, output, session) {
           dataname <- self$get_dataname()
           logger::log_debug("FilteredDataset$srv_active initializing, dataname: { dataname }")
-          checkmate::assert_string(dataname)
 
-          filter_count <- reactive({
-            length(self$get_filter_state())
+          filter_count <- reactive(length(self$get_filter_state()))
+
+          is_displayed <- reactiveVal()
+          private$session_bindings[[session$ns("is_displayed")]] <- observe({
+            res <- private$allow_add() || filter_count() > 0
+            isolate(
+              if (!identical(res, is_displayed())) is_displayed(res)
+            )
+          })
+
+          output$container <- renderUI({
+            if (is_displayed()) {
+              isolate({
+                tags$span(
+                  id = session$ns(id),
+                  class = "teal-slice",
+                  include_css_files("filter-panel"),
+                  include_js_files(pattern = "icons"),
+                  bslib::accordion(
+                    id = session$ns("dataset_filter_accordion"),
+                    class = "teal-slice-dataset-filter",
+                    bslib::accordion_panel(
+                      dataname,
+                      style = "padding: 0; margin: 0;",
+                      bslib::page_fluid(
+                        id = session$ns("whole_ui"),
+                        style = "margin: 0; padding: 0;",
+                        uiOutput(session$ns("active_filter_badge")),
+                        div(
+                          id = session$ns("filter_util_icons"),
+                          class = "teal-slice filter-util-icons",
+                          tags$a(
+                            class = "teal-slice filter-icon",
+                            tags$i(
+                              id = session$ns("add_filter_icon"),
+                              class = "fa fa-plus",
+                              title = "fold/expand transform panel",
+                              onclick = sprintf(
+                                "togglePanelItems(this, '%s', 'fa-plus', 'fa-minus');
+                                if ($(this).hasClass('fa-minus')) {
+                                  $('#%s .accordion-button.collapsed').click();
+                                }",
+                                session$ns("add_panel"),
+                                session$ns("dataset_filter_accordion")
+                              )
+                            )
+                          ),
+                          uiOutput(session$ns("filter_util_remove_icons"))
+                        ),
+                        bslib::page_fluid(
+                          style = "padding: 0px; margin: 0;",
+                          tags$div(
+                            id = session$ns("add_panel"),
+                            class = "add-panel",
+                            style = "display: none;",
+                            self$ui_add(session$ns(private$dataname))
+                          )
+                        ),
+                        tags$div(
+                          id = session$ns("filter_count_ui"),
+                          style = "display: none;",
+                          tagList(
+                            textOutput(session$ns("filter_count"))
+                          )
+                        ),
+                        tags$div(
+                          # id needed to insert and remove UI to filter single variable as needed
+                          # it is currently also used by the above module to entirely hide this panel
+                          id = session$ns("filters"),
+                          class = "parent-hideable-list-group",
+                          tagList(
+                            lapply(
+                              names(private$get_filter_states()),
+                              function(x) {
+                                tagList(private$get_filter_states()[[x]]$ui_active(id = session$ns(x)))
+                              }
+                            )
+                          )
+                        )
+                      )
+                    )
+                  ),
+                  tags$script(
+                    HTML(
+                      sprintf(
+                        "
+            $(document).ready(function() {
+              $('#%s').appendTo('#%s > .accordion-item > .accordion-header');
+              $('#%s > .accordion-item > .accordion-header').css({
+                'display': 'flex'
+              });
+              $('#%s').appendTo('#%s .accordion-header .accordion-title');
+            });
+          ",
+                        session$ns("filter_util_icons"),
+                        session$ns("dataset_filter_accordion"),
+                        session$ns("dataset_filter_accordion"),
+                        session$ns("active_filter_badge"),
+                        session$ns("dataset_filter_accordion")
+                      )
+                    )
+                  )
+                )
+              })
+            }
+          })
+
+          output$active_filter_badge <- renderUI({
+            if (filter_count() == 0) {
+              return(NULL)
+            }
+            tags$span(
+              filter_count(),
+              class = "teal-slice data-filter-badge-count"
+            )
           })
 
           output$filter_count <- renderText(
@@ -302,6 +352,22 @@ FilteredDataset <- R6::R6Class( # nolint
             )
           )
 
+          output$filter_util_remove_icons <- renderUI({
+            if (private$allow_add()) {
+              if (length(Filter(function(x) !x$anchored, self$get_filter_state())) > 0) {
+                tags$div(
+                  style = "display: flex;",
+                  actionLink(
+                    session$ns("remove_filters"),
+                    label = "",
+                    icon = icon("far fa-circle-xmark"),
+                    class = "teal-slice filter-icon"
+                  )
+                )
+              }
+            }
+          })
+
           lapply(
             names(private$get_filter_states()),
             function(x) {
@@ -309,68 +375,38 @@ FilteredDataset <- R6::R6Class( # nolint
             }
           )
 
-          is_filter_collapsible <- reactive({
-            filter_count() != 0
-          })
-
-          output$collapse_ui <- renderUI({
-            req(is_filter_collapsible())
-            tags$a(
-              id = session$ns("collapse"),
-              class = "filter-icon",
-              tags$i(
-                id = session$ns("collapse_icon"),
-                class = "fa fa-angle-down",
-                title = "fold/expand dataset filters",
-                # TODO: clickWhenClassPresent() is used to hide the add_ui pannel during a collapse of the UI.
-                # In the future, it should be completely handled by collapsing the UI by positioning.
-                onclick = sprintf(
-                  "togglePanelItems(this, ['%s', '%s'], 'fa-angle-down', 'fa-angle-right');
-                  clickWhenClassPresent('%s', 'fa-minus', this.classList.contains('fa-angle-right'));",
-                  session$ns("filter_count_ui"),
-                  session$ns("filters"),
-                  session$ns("add_filter_icon")
-                )
-              )
-            )
-          })
-
-          is_filter_removable <- reactive({
-            non_anchored <- Filter(function(x) !x$anchored, self$get_filter_state())
-            isTRUE(length(non_anchored) > 0)
-          })
-
           private$session_bindings[[session$ns("get_filter_state")]] <- observeEvent(
             self$get_filter_state(),
             ignoreInit = TRUE,
             {
               shinyjs::hide("filter_count_ui")
               shinyjs::show("filters")
-              shinyjs::toggle("remove_filters_ui", condition = is_filter_removable())
-              shinyjs::toggle("collapse_ui", condition = is_filter_collapsible())
-              shinyjs::runjs(
-                sprintf(
-                  "setAndRemoveClass('#%s', 'fa-angle-down', 'fa-angle-right')",
-                  session$ns("collapse_icon")
-                )
-              )
             }
           )
 
-          output$remove_filters_ui <- renderUI({
-            req(is_filter_removable())
-            actionLink(
-              session$ns("remove_filters"),
-              label = "",
-              icon = icon("circle-xmark", lib = "font-awesome"),
-              class = "filter-icon"
-            )
+          # If the accordion input is `NULL` it is being collapsed.
+          # It has the accordion panel label if it is expanded.
+          observeEvent(input$dataset_filter_accordion, ignoreNULL = FALSE, {
+            if (is.null(input$dataset_filter_accordion)) {
+              # Hiding the `add_panel` dropdown and changing the minus icon to plus
+              # TODO: simplify this implementation. This is done in multiple places
+              shinyjs::runjs(
+                sprintf(
+                  "var element = $('#%s.fa-minus');
+                  if (element.length) {
+                      element.click();
+                      $('#%s').hide();
+                  }",
+                  session$ns("add_filter_icon"),
+                  session$ns("add_panel")
+                )
+              )
+            }
           })
 
           private$session_bindings[[session$ns("remove_filters")]] <- observeEvent(input$remove_filters, {
             logger::log_debug("FilteredDataset$srv_active@1 removing all non-anchored filters, dataname: { dataname }")
             self$clear_filter_states()
-            logger::log_debug("FilteredDataset$srv_active@1 removed all non-anchored filters, dataname: { dataname }")
           })
 
           private$session_bindings[[session$ns("inputs")]] <- list(
@@ -411,7 +447,7 @@ FilteredDataset <- R6::R6Class( # nolint
       moduleServer(
         id = id,
         function(input, output, session) {
-          logger::log_debug("MAEFilteredDataset$srv_add initializing, dataname: { deparse1(self$get_dataname()) }")
+          logger::log_debug("FilteredDataset$srv_add initializing, dataname: { private$dataname }")
           elems <- private$get_filter_states()
           elem_names <- names(private$get_filter_states())
           lapply(
@@ -422,23 +458,11 @@ FilteredDataset <- R6::R6Class( # nolint
           NULL
         }
       )
-    },
-
-    #' @description
-    #' Object and dependencies cleanup.
-    #'
-    #' - Destroy inputs and observers stored in `private$session_bindings`
-    #' - Finalize `FilterStates` stored in `private$filter_states`
-    #'
-    #' @return `NULL`, invisibly.
-    finalize = function() {
-      .finalize_session_bindings(self, private)
-      lapply(private$filter_states, function(x) x$finalize())
-      invisible(NULL)
     }
   ),
   # private fields ----
   private = list(
+    allow_add = NULL, # reactiveVal
     dataset = NULL, # data.frame or MultiAssayExperiment
     data_filtered = NULL,
     data_filtered_fun = NULL, # function
@@ -464,6 +488,19 @@ FilteredDataset <- R6::R6Class( # nolint
     # @return list of `FilterStates` objects.
     get_filter_states = function() {
       private$filter_states
+    },
+
+    # @description
+    # Object and dependencies cleanup.
+    #
+    # - Destroy inputs and observers stored in `private$session_bindings`
+    # - Finalize `FilterStates` stored in `private$filter_states`
+    #
+    # @return `NULL`, invisibly.
+    finalize = function() {
+      .finalize_session_bindings(self, private)
+      lapply(private$filter_states, function(x) x$destroy())
+      invisible(NULL)
     }
   )
 )

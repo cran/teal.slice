@@ -134,6 +134,9 @@ FilteredData <- R6::R6Class( # nolint
       invisible(self)
     },
 
+    #' @description Destroys a `FilteredData` object.
+    destroy = function() private$finalize(),
+
     #' @description
     #' Gets `datanames`.
     #' @details
@@ -432,21 +435,14 @@ FilteredData <- R6::R6Class( # nolint
     remove_filter_state = function(state) {
       isolate({
         checkmate::assert_class(state, "teal_slices")
+        state_ids <- unique(vapply(state, "[[", character(1L), "id"))
+        logger::log_debug("{ class(self)[1] }$remove_filter_state removing filter(s), dataname: { state_ids }")
         datanames <- unique(vapply(state, "[[", character(1L), "dataname"))
         checkmate::assert_subset(datanames, self$datanames())
-
-        logger::log_debug(
-          "{ class(self)[1] }$remove_filter_state removing filter(s), dataname: { private$dataname }"
-        )
-
         lapply(datanames, function(dataname) {
           slices <- Filter(function(x) identical(x$dataname, dataname), state)
           private$get_filtered_dataset(dataname)$remove_filter_state(slices)
         })
-
-        logger::log_debug(
-          "{ class(self)[1] }$remove_filter_state removed filter(s), dataname: { private$dataname }"
-        )
       })
 
       invisible(NULL)
@@ -464,22 +460,11 @@ FilteredData <- R6::R6Class( # nolint
     #' @return `NULL`, invisibly.
     #'
     clear_filter_states = function(datanames = self$datanames(), force = FALSE) {
-      logger::log_debug(
-        "FilteredData$clear_filter_states called, datanames: { toString(datanames) }"
-      )
-
+      logger::log_debug("FilteredData$clear_filter_states called, datanames: { toString(datanames) }")
       for (dataname in datanames) {
         fdataset <- private$get_filtered_dataset(dataname = dataname)
         fdataset$clear_filter_states(force)
       }
-
-      logger::log_debug(
-        paste(
-          "FilteredData$clear_filter_states removed all non-anchored FilterStates,",
-          "datanames: { toString(datanames) }"
-        )
-      )
-
       invisible(NULL)
     },
 
@@ -497,8 +482,9 @@ FilteredData <- R6::R6Class( # nolint
     #' @return `shiny.tag`
     ui_filter_panel = function(id, active_datanames = self$datanames) {
       ns <- NS(id)
-      tags$div(
+      bslib::page_fluid(
         id = ns(NULL), # used for hiding / showing
+        class = "teal-slice filter-panel",
         include_css_files(pattern = "filter-panel"),
         include_js_files(pattern = "togglePanelItems"),
         shinyjs::useShinyjs(),
@@ -520,22 +506,19 @@ FilteredData <- R6::R6Class( # nolint
     #' @return `NULL`.
     srv_filter_panel = function(id, active_datanames = self$datanames) {
       checkmate::assert_function(active_datanames)
-      moduleServer(
-        id = id,
-        function(input, output, session) {
-          logger::log_debug("FilteredData$srv_filter_panel initializing")
+      moduleServer(id = id, function(input, output, session) {
+        logger::log_debug("FilteredData$srv_filter_panel initializing")
 
-          active_datanames_resolved <- reactive({
-            checkmate::assert_subset(active_datanames(), self$datanames())
-            active_datanames()
-          })
+        active_datanames_resolved <- reactive({
+          checkmate::assert_subset(active_datanames(), self$datanames())
+          active_datanames()
+        })
 
-          self$srv_overview("overview", active_datanames_resolved)
-          self$srv_active("active", active_datanames_resolved)
+        self$srv_overview("overview", active_datanames_resolved)
+        self$srv_active("active", active_datanames_resolved)
 
-          NULL
-        }
-      )
+        NULL
+      })
     },
 
     #' @description
@@ -549,45 +532,60 @@ FilteredData <- R6::R6Class( # nolint
       ns <- NS(id)
       tags$div(
         id = id, # not used, can be used to customize CSS behavior
-        class = "well",
         include_js_files(pattern = "togglePanelItems"),
-        tags$div(
-          style = "display: flex; justify-content: space-between;",
-          tags$span("Active Filter Variables", class = "text-primary", style = "font-weight: 700;"),
-          tags$div(
-            style = "min-width: 60px;",
-            uiOutput(ns("remove_all_filters_ui")),
-            tags$a(
-              class = "remove_all",
-              tags$i(
-                class = "fa fa-angle-down",
-                title = "fold/expand ...",
-                onclick = sprintf(
-                  "togglePanelItems(this, ['%s', '%s'], 'fa-angle-down', 'fa-angle-right');",
-                  ns("filter_active_vars_contents"),
-                  ns("filters_active_count")
+        class = "teal-slice",
+        bslib::accordion(
+          id = ns("main_filter_accordion"),
+          bslib::accordion_panel(
+            "Filter Data",
+            tags$div(
+              div(
+                id = ns("additional_filter_helpers"),
+                class = "teal-slice available-filters",
+                private$ui_available_filters(ns("available_filters")),
+                uiOutput(ns("remove_all_filters_ui"))
+              ),
+              tags$div(
+                id = ns("filter_active_vars_contents"),
+                tagList(
+                  lapply(
+                    isolate(active_datanames()),
+                    function(dataname) {
+                      fdataset <- private$get_filtered_dataset(dataname)
+                      fdataset$ui_active(id = ns(dataname))
+                    }
+                  )
                 )
+              ),
+              tags$div(
+                id = ns("filters_active_count"),
+                style = "display: none;",
+                textOutput(ns("teal_filters_count"))
               )
-            ),
-            private$ui_available_filters(ns("available_filters"))
-          )
-        ),
-        tags$div(
-          id = ns("filter_active_vars_contents"),
-          tagList(
-            lapply(
-              isolate(active_datanames()),
-              function(dataname) {
-                fdataset <- private$get_filtered_dataset(dataname)
-                fdataset$ui_active(id = ns(dataname), allow_add = private$allow_add)
-              }
             )
           )
         ),
-        tags$div(
-          id = ns("filters_active_count"),
-          style = "display: none;",
-          textOutput(ns("teal_filters_count"))
+        tags$script(
+          HTML(
+            sprintf(
+              "
+            $(document).ready(function() {
+              $('#%s').appendTo('#%s > .accordion-item > .accordion-header');
+              $('#%s > .accordion-item > .accordion-header').css({
+                'display': 'flex'
+              });
+              $('#%s i').css({
+                'color': 'var(--bs-accordion-color)',
+                'font-size': '1rem'
+              });
+            });
+          ",
+              ns("additional_filter_helpers"),
+              ns("main_filter_accordion"),
+              ns("main_filter_accordion"),
+              ns("additional_filter_helpers")
+            )
+          )
         )
       )
     },
@@ -627,12 +625,15 @@ FilteredData <- R6::R6Class( # nolint
 
         output$remove_all_filters_ui <- renderUI({
           req(is_filter_removable())
-          actionLink(
-            inputId = session$ns("remove_all_filters"),
-            label = "",
-            icon("circle-xmark", lib = "font-awesome"),
-            title = "Remove active filters",
-            class = "remove_all"
+          tags$div(
+            style = "display: flex;",
+            actionLink(
+              inputId = session$ns("remove_all_filters"),
+              label = "",
+              title = "Remove active filters",
+              icon = icon("far fa-circle-xmark"),
+              class = "teal-slice filter-icon remove-all"
+            )
           )
         })
 
@@ -683,7 +684,6 @@ FilteredData <- R6::R6Class( # nolint
           handlerExpr = {
             logger::log_debug("FilteredData$srv_filter_panel@1 removing all non-anchored filters")
             self$clear_filter_states()
-            logger::log_debug("FilteredData$srv_filter_panel@1 removed all non-anchored filters")
           }
         )
 
@@ -711,34 +711,18 @@ FilteredData <- R6::R6Class( # nolint
     ui_overview = function(id) {
       ns <- NS(id)
       tags$div(
-        id = id, # not used, can be used to customize CSS behavior
-        class = "well",
-        tags$div(
-          class = "row",
-          tags$div(
-            class = "col-sm-9",
-            tags$label("Active Filter Summary", class = "text-primary mb-4")
-          ),
-          tags$div(
-            class = "col-sm-3",
-            tags$a(
-              class = "filter-icon",
-              tags$i(
-                class = "fa fa-angle-down",
-                title = "fold/expand ...",
-                onclick = sprintf(
-                  "togglePanelItems(this, '%s', 'fa-angle-down', 'fa-angle-right');",
-                  ns("filters_overview_contents")
-                )
+        class = "teal-slice",
+        bslib::accordion(
+          id = ns("main_filter_accordion"),
+          bslib::accordion_panel(
+            title = "Active Filter Summary",
+            tags$div(
+              id = ns("filters_overview_contents"),
+              tags$div(
+                style = "overflow-x: auto;",
+                tableOutput(ns("table"))
               )
             )
-          )
-        ),
-        tags$div(
-          id = ns("filters_overview_contents"),
-          tags$div(
-            class = "teal_active_summary_filter_panel",
-            tableOutput(ns("table"))
           )
         )
       )
@@ -838,30 +822,16 @@ FilteredData <- R6::R6Class( # nolint
             header_html <- tags$tr(tagList(lapply(header_labels, tags$td)))
 
             table_html <- tags$table(
-              class = "table custom-table",
+              class = "teal-slice table custom-table",
               tags$thead(header_html),
               tags$tbody(body_html)
             )
-            logger::log_debug("FilteredData$srv_filter_overview@1 updated counts")
             table_html
           })
 
           NULL
         }
       )
-    },
-
-    #' @description
-    #' Object and dependencies cleanup.
-    #'
-    #' - Destroy inputs and observers stored in `private$session_bindings`
-    #' - Finalize `FilteredData` stored in `private$filtered_datasets`
-    #'
-    #' @return `NULL`, invisibly.
-    finalize = function() {
-      .finalize_session_bindings(self, private)
-      lapply(private$filtered_datasets, function(x) x$finalize())
-      invisible(NULL)
     }
   ),
 
@@ -918,15 +888,13 @@ FilteredData <- R6::R6Class( # nolint
       tags$div(
         id = ns("available_menu"),
         shinyWidgets::dropMenu(
-          actionLink(
-            ns("show"),
-            label = NULL,
-            icon = icon("plus", lib = "font-awesome"),
-            title = "Available filters",
-            class = "remove pull-right"
+          tags$a(
+            id = ns("show"),
+            class = "available-menu",
+            bsicons::bs_icon("plus-square", size = "1.4rem", class = "teal-slice filter-icon", fill = "#fff"),
           ),
           tags$div(
-            class = "menu-content",
+            style = "min-width: 15em;",
             shinycssloaders::withSpinner(
               uiOutput(ns("checkbox")),
               type = 4,
@@ -1053,6 +1021,19 @@ FilteredData <- R6::R6Class( # nolint
           }
         )
       })
+    },
+
+    # @description
+    # Object and dependencies cleanup.
+    #
+    # - Destroy inputs and observers stored in `private$session_bindings`
+    # - Finalize `FilteredData` stored in `private$filtered_datasets`
+    #
+    # @return `NULL`, invisibly.
+    finalize = function() {
+      .finalize_session_bindings(self, private)
+      lapply(private$filtered_datasets, function(x) x$destroy())
+      invisible(NULL)
     }
   )
 )

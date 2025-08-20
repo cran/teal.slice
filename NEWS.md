@@ -1,3 +1,17 @@
+# teal.slice 0.7.0
+
+### Enhancements
+
+* Improved the layout and appearance of the filter panel with new UI design.
+
+### Bug fixes
+
+* Fix bug where drop-down choices show no choices (#662).
+
+### Miscellaneous
+
+* In R6 classes `finalize()` method is moved to private and is replaced in public API by `destroy()` (#658).
+
 # teal.slice 0.6.0
 
 ### Enhancements
